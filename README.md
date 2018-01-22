@@ -1,7 +1,9 @@
-# ZED Unreal Plugin
+# ZED Unreal plugin
 
-This plugin gives you access to advanced Mixed Reality features to create immersive applications using the ZED.
+The plugin for Unreal allows developers to build mixed-reality applications with the ZED. It provides access to stereo pass-through, depth sensing, positional tracking and spatial mapping features within Unreal. 
 
-## How to use
+Tutorials and samples are available [here](https://github.com/stereolabs/zed-unreal-samples).
 
-A modified version of the Unreal Engine is required to use this plugin, you can get all the setup instruction in the dedicated __[documentation](https://www.stereolabs.com/documentation/mixed-reality/unreal/getting-started.html)__.
+## Requirements
+
+Stereolabs has released a custom version of the Unreal Engine to integrate advanced MR features within Unreal. Check out our [Getting Started section](https://www.stereolabs.com/documentation/mixed-reality/unreal/getting-started.html) to learn more.
