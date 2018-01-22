@@ -1,4 +1,4 @@
-# ZED Unreal plugin
+# Stereolabs ZED - UE4 Plugin
 
 The plugin for Unreal allows developers to build mixed-reality applications with the ZED. It provides access to stereo pass-through, depth sensing, positional tracking and spatial mapping features within Unreal. 
 
