@@ -8,15 +8,25 @@
 namespace sl {
 	namespace mr {
 
+		enum EHmdType {
+			eHmdType_Vive,
+			eHmdType_Oculus
+		};
+
 		/**
 		 * \brief Initialize latency corrector. No functions can be called before initialization.
 		 */
-		SLMRCORE_API void latencyCorrectorInitialize();
+		SLMRCORE_API void latencyCorrectorInitialize(EHmdType type);
 
 		/**
 		 * \brief Shutdown latency corrector. No functions can be called after shutdown.
 		 */
 		SLMRCORE_API void latencyCorrectorShutdown();
+
+		/**
+		* \brief Shutdown latency corrector. No functions can be called after shutdown.
+		*/
+		SLMRCORE_API void latencyCorrectorAdjOffset(sl::timeStamp offset);
 
 		/**
 		 * \brief Delete latency corrector

@@ -301,8 +301,12 @@ namespace sl
 					return ESlErrorCode::EC_IncompatibleAreaFile;
 				case sl::ERROR_CODE::ERROR_CODE_CAMERA_DETECTION_ISSUE:
 					return ESlErrorCode::EC_CameraDetectionIssue;
+				case sl::ERROR_CODE::ERROR_CODE_CAMERA_FAILED_TO_SETUP:
+					return ESlErrorCode::EC_CameraFailedtoSetup;
 				case sl::ERROR_CODE::ERROR_CODE_CAMERA_ALREADY_IN_USE:
 					return ESlErrorCode::EC_CameraAlreadyInUse;
+				case sl::ERROR_CODE::ERROR_CODE_NO_GPU_DETECTED:
+					return ESlErrorCode::EC_NoGPUDetected;
 				case sl::ERROR_CODE::ERROR_CODE_LAST:
 					return ESlErrorCode::EC_None;
 				default:
@@ -765,8 +769,12 @@ namespace sl
 					return sl::ERROR_CODE::ERROR_CODE_INCOMPATIBLE_AREA_FILE;
 				case ESlErrorCode::EC_CameraDetectionIssue:
 					return sl::ERROR_CODE::ERROR_CODE_CAMERA_DETECTION_ISSUE;
+				case ESlErrorCode::EC_CameraFailedtoSetup:
+					return sl::ERROR_CODE::ERROR_CODE_CAMERA_FAILED_TO_SETUP;
 				case ESlErrorCode::EC_CameraAlreadyInUse:
 					return sl::ERROR_CODE::ERROR_CODE_CAMERA_ALREADY_IN_USE;
+				case ESlErrorCode::EC_NoGPUDetected:
+					return sl::ERROR_CODE::ERROR_CODE_NO_GPU_DETECTED;
 				case ESlErrorCode::EC_None:
 					return sl::ERROR_CODE::ERROR_CODE_LAST;
 				default:

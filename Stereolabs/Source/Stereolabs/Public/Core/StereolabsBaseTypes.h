@@ -316,7 +316,9 @@ enum class ESlErrorCode : uint8
 	EC_InvalidAreaFile			   UMETA(DisplayName = "Invalid area file"),
 	EC_IncompatibleAreaFile		   UMETA(DisplayName = "Incompatible area file"),
 	EC_CameraDetectionIssue		   UMETA(DisplayName = "Camera detection issue"),
+	EC_CameraFailedtoSetup		   UMETA(DisplayName = "Failed to setup camera"),
 	EC_CameraAlreadyInUse		   UMETA(DisplayName = "Camera used by another process"),
+	EC_NoGPUDetected		       UMETA(DisplayName = "No GPU detected"),
 	// ERROR_CODE_LAST
 	EC_None					  	   UMETA(DisplayName = "No error") 
 };

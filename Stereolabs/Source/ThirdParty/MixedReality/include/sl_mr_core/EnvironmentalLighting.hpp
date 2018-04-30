@@ -42,4 +42,4 @@ namespace sl {
 	}
 }
 
-#endif // __ENVLIGHT_H__
+#endif // __ENVLIGHTS_H__

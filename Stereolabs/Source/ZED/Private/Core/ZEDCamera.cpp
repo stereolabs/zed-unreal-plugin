@@ -1,5 +1,7 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
+
+
 #include "ZEDPrivatePCH.h"
 #include "ZED/Public/Core/ZEDCamera.h"
 #include "ZED/Public/Core/ZEDCoreGlobals.h"
@@ -9,6 +11,7 @@
 #include "Stereolabs/Public/Utilities/StereolabsFunctionLibrary.h"
 #include "Stereolabs/Public/Core/StereolabsCameraProxy.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "IXRTrackingSystem.h"
 
 #include <sl_mr_core/Rendering.hpp>
 #include <sl_mr_core/latency.hpp>
@@ -645,7 +648,11 @@ void AZEDCamera::Init(bool bHMDEnabled)
 
 	if (bHMDEnabled)
 	{
-		sl::mr::latencyCorrectorInitialize();
+		if (GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType()== EHMDDeviceType::Type::DT_OculusRift)
+		sl::mr::latencyCorrectorInitialize(sl::mr::eHmdType_Oculus);
+		else if (GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType() == EHMDDeviceType::Type::DT_SteamVR)
+		sl::mr::latencyCorrectorInitialize(sl::mr::eHmdType_Vive);
+
 
 		if (TrackingParameters.bEnableTracking)
 		{
