@@ -14,8 +14,6 @@ class ZED_API UZEDWidget : public USceneComponent
 public:
 	UZEDWidget();
 
-	void BeginDestroy() override;
-
 public:
 	/*
 	 * Set the widget visibility

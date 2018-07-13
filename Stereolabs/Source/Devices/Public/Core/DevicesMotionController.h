@@ -28,6 +28,16 @@ private:
 	UFUNCTION()
 	void Stop();
 
+public:
+
+	UFUNCTION(BlueprintCallable, Category = "Zed")
+	void ModifyLatencyTime(const int& NewLatencyInMs);
+
+	UFUNCTION(BlueprintCallable, Category = "Zed")
+	int GetModifiedLatencyTime();
+
+
+
 private:
 	/*
 	 * Get the motion controller transform delayed of "LatencyTime" milliseconds 
@@ -59,4 +69,10 @@ private:
 
 	/** Update transform timer handle */
 	FTimerHandle TimerHandle;
+
+	/**  */
+	bool isDeviceInitialized = false;
+
+	/**  */
+	bool bHmdTranslationUsed = false;
 };

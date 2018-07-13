@@ -16,7 +16,7 @@
 DECLARE_CYCLE_STAT(TEXT("CalcSceneView"), STAT_CalcSceneView, STATGROUP_Engine);
 
 static TAutoConsoleVariable<int32> CVarViewportTest(
-	TEXT("r.ViewportTest"),
+	TEXT("r.Test.ConstrainedView"),
 	0,
 	TEXT("Allows to test different viewport rectangle configuations (in game only) as they can happen when using Matinee/Editor.\n")
 	TEXT("0: off(default)\n")
@@ -44,6 +44,10 @@ bool UZEDLocalPlayer::GetZEDProjectionData(FViewport* Viewport, FSceneViewProjec
 	{
 		int32 X = FMath::TruncToInt(Origin.X * Viewport->GetSizeXY().X);
 		int32 Y = FMath::TruncToInt(Origin.Y * Viewport->GetSizeXY().Y);
+
+		X += Viewport->GetInitialPositionXY().X;
+		Y += Viewport->GetInitialPositionXY().Y;
+
 		uint32 SizeX = FMath::TruncToInt(Size.X * Viewport->GetSizeXY().X);
 		uint32 SizeY = FMath::TruncToInt(Size.Y * Viewport->GetSizeXY().Y);
 

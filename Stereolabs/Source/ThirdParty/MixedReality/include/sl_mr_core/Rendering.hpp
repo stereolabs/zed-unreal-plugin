@@ -59,6 +59,11 @@ namespace sl {
 		 */
 		SLMRCORE_API sl::mr::noiseFactors computeNoiseFactors(float gain);
 
+		/**
+		* \brief 
+		*/
+		SLMRCORE_API void computeSRemap(sl::mr::HMD_DEVICE_TYPE HMDDeviceType, sl::RESOLUTION camRes, float b, float Ipd, float f_h, float f_z, float dp, float Hy, float Hz, sl::Resolution requestedSize, int precision, sl::Mat*& outputMx, sl::Mat*& outputMy);
+
 	}
 }
 

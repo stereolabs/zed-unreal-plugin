@@ -42,6 +42,8 @@ namespace sl {
 		 */
 		SLMRCORE_API bool latencyCorrectorGetTransform(sl::timeStamp timeStamp, sl::Transform& outTransform, bool useLatencyTime = true);
 
+		SLMRCORE_API void ComputeOptimSO3(std::vector<sl::mr::keyOrientation> serie1, std::vector<sl::mr::keyOrientation> serie2, sl::mr::keyOrientation& output);
+
 	}
 }
 

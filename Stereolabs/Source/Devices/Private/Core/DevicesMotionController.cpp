@@ -5,6 +5,7 @@
 #include "Stereolabs/Public/Core/StereolabsBaseTypes.h"
 #include "ZED/Public/Utilities/ZEDFunctionLibrary.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "ZED/Public/Core/ZEDInitializer.h"
 
 #include <sl_mr_core/latency.hpp>
 
@@ -24,19 +25,21 @@ ADevicesMotionController::ADevicesMotionController()
 	AddTickPrerequisiteComponent(MotionController);
 
 	TransformBuffer.Reserve(LatencyTime);
+
+	// Get Zed initializer object
+	TArray<AActor*> ZedInitializer;
+	UGameplayStatics::GetAllActorsOfClass(this, AZEDInitializer::StaticClass(), ZedInitializer);
+	if (ZedInitializer.Num() >= 1)
+	{
+		AZEDInitializer* Initializer = static_cast<AZEDInitializer*>(ZedInitializer[0]);
+		if(Initializer->TrackingParameters.TrackingType != ETrackingType::TrT_ZED)
+			bHmdTranslationUsed = true;
+	}
 }
 
 void ADevicesMotionController::BeginPlay()
 {
 	Super::BeginPlay();
-
-	SetActorTickEnabled(false);
-
-	AZEDCamera* ZedCameraActor = UZEDFunctionLibrary::GetCameraActor(this);
-	if (ZedCameraActor)
-	{
-		UZEDFunctionLibrary::GetCameraActor(this)->OnCameraActorInitialized.AddDynamic(this, &ADevicesMotionController::Start);
-	}
 
 	GSlCameraProxy->OnCameraClosed.AddDynamic(this, &ADevicesMotionController::Stop);
 }
@@ -44,12 +47,6 @@ void ADevicesMotionController::BeginPlay()
 void ADevicesMotionController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-
-	AZEDCamera* ZedCameraActor = UZEDFunctionLibrary::GetCameraActor(this);
-	if (ZedCameraActor)
-	{
-		ZedCameraActor->OnCameraActorInitialized.RemoveDynamic(this, &ADevicesMotionController::Start);
-	}
 
 	if (GSlCameraProxy)
 	{
@@ -59,10 +56,22 @@ void ADevicesMotionController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ADevicesMotionController::Tick(float DeltaTime)
 {
-	FTransform Transform;
-	if (GetTransform(Transform))
+	if (!isDeviceInitialized)
 	{
-		SetActorTransform(Transform);
+		AZEDCamera* ZedCameraActor = UZEDFunctionLibrary::GetCameraActor(this);
+		if (ZedCameraActor)
+		{
+			Start();
+		}
+	}
+
+	if (isDeviceInitialized)
+	{
+		FTransform Transform;
+		if (GetTransform(Transform))
+		{
+			SetActorTransform(Transform);
+		}
 	}
 
 	Super::Tick(DeltaTime);
@@ -80,13 +89,26 @@ void ADevicesMotionController::Start()
 	UpdateTransformBuffer();
 
 	GetWorldTimerManager().SetTimer(TimerHandle, this, &ADevicesMotionController::UpdateTransformBuffer, 0.001f, true);
-	SetActorTickEnabled(true);
+
+	isDeviceInitialized = true;
 }
 
 void ADevicesMotionController::Stop()
 {
 	GetWorldTimerManager().ClearTimer(TimerHandle);
-	SetActorTickEnabled(false);
+	isDeviceInitialized = false;
+}
+
+void ADevicesMotionController::ModifyLatencyTime(const int& NewLatencyInMs)
+{
+	LatencyTime = NewLatencyInMs;
+	TransformBuffer.Empty();
+	TransformBuffer.Reserve(LatencyTime);
+}
+
+int ADevicesMotionController::GetModifiedLatencyTime()
+{
+	return LatencyTime;
 }
 
 FTransform ADevicesMotionController::GetDelayedTransform()
@@ -118,7 +140,14 @@ bool ADevicesMotionController::GetTransform(FTransform& Transform)
 		return false;
 	}
 
-	Transform = (DelayedTransform * sl::unreal::ToUnrealType(SlLatencyTransform).Inverse()) * TrackingData.OffsetZedWorldTransform;
+	if (bHmdTranslationUsed)
+	{
+		Transform = DelayedTransform;
+	}
+	else
+	{
+		Transform = (DelayedTransform * sl::unreal::ToUnrealType(SlLatencyTransform).Inverse()) * TrackingData.OffsetZedWorldTransform;
+	}	
 
 	return true;
 }

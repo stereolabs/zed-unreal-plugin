@@ -55,6 +55,30 @@ public:
 	}
 
 	/*
+	* Get the current frame Zed rotation and location
+	* @param Orientation The camera rotation
+	* @param Location    The camera location
+	*/
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "SetRawOrientationAndLocation", Keywords = "set zed camera orientation and location"), Category = "Stereolabs|Zed")
+		static void SetRawOrientationAndLocation(const FRotator& Orientation, const FVector& Location)
+	{
+		GZedRawRotation = Orientation;
+		GZedRawLocation = Location;
+	}
+
+	/*
+	* Get the current frame view point rotation and location, head(stereo)/camera(mono)
+	* @param Orientation The camera rotation
+	* @param Location    The camera location
+	*/
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "SetViewPointOrientationAndLocation", Keywords = "set zed camera orientation and location"), Category = "Stereolabs|Zed")
+		static void SetViewPointOrientationAndLocation(const FRotator& Orientation, const FVector& Location)
+	{
+		GZedViewPointRotation = Orientation;
+		GZedViewPointLocation = Location;
+	}
+
+	/*
 	 * Get Zed player controller. Can be null
 	 * @return The Zed player controller
 	 */
@@ -428,4 +452,14 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "ZEDProjectWorldToScreen"), Category = "Stereolabs|Zed")
 	static bool ProjectWorldToScreen(AZEDPlayerController const* Player, const FVector& WorldPosition, FVector2D& ScreenPosition);
+
+	/*
+	* Add latency corrector offset
+	* @param PlayerController		  The Zed player controller
+	* @param WorldPosition			  The world position
+	* @param ScreenPosition		  The screen position
+	* @return True if projected
+	*/
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "AddLatencyOffset"), Category = "Stereolabs|Latency")
+	static void LatencyCorrectorAddOffset(const int offset);
 };

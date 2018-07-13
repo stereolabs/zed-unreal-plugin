@@ -1,7 +1,5 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
-
-
 #include "ZEDPrivatePCH.h"
 #include "ZED/Public/Core/ZEDCamera.h"
 #include "ZED/Public/Core/ZEDCoreGlobals.h"
@@ -11,11 +9,13 @@
 #include "Stereolabs/Public/Utilities/StereolabsFunctionLibrary.h"
 #include "Stereolabs/Public/Core/StereolabsCameraProxy.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
-#include "IXRTrackingSystem.h"
+#include "Kismet/KismetRenderingLibrary.h"
 
 #include <sl_mr_core/Rendering.hpp>
 #include <sl_mr_core/latency.hpp>
 #include <sl_mr_core/antidrift.hpp>
+
+#include "IXRTrackingSystem.h"
 
 DEFINE_LOG_CATEGORY(ZEDCamera);
 
@@ -43,7 +43,6 @@ AZEDCamera::AZEDCamera()
 	bUseHMDTrackingAsOrigin(false),
 	bInit(false),
 	HMDRenderPlaneDistance(1000.0f),
-	HMDCameraOffset(-20000.0f),
 	RenderingMode(ESlRenderingMode::RM_None),
 	Batch(nullptr),
 	LeftEyeColor(nullptr),
@@ -67,6 +66,80 @@ AZEDCamera::AZEDCamera()
 
 	static ConstructorHelpers::FObjectFinder<UMaterial> HMDRightEyeMaterial(TEXT("Material'/Stereolabs/ZED/Materials/Stereo/M_ZED_HMDRightEye.M_ZED_HMDRightEye'"));
 	HMDRightEyeSourceMaterial = HMDRightEyeMaterial.Object;
+
+	// components creation
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
+	InterLeftRoot = CreateDefaultSubobject<USceneComponent>(TEXT("InterLeftRoot"));
+	InterLeftPlaneRotationRoot = CreateDefaultSubobject<USceneComponent>(TEXT("InterLeftPlaneRotationRoot"));
+	InterLeftPlaneTranslationRoot = CreateDefaultSubobject<USceneComponent>(TEXT("InterLeftPlaneTranslationRoot"));
+	InterRightRoot = CreateDefaultSubobject<USceneComponent>(TEXT("InterRightRoot"));
+	InterRightPlaneRotationRoot = CreateDefaultSubobject<USceneComponent>(TEXT("InterRightPlaneRotationRoot"));
+	InterRightPlaneTranslationRoot = CreateDefaultSubobject<USceneComponent>(TEXT("InterRightPlaneTranslationRoot"));
+	InterLeftCamera = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("InterLeftCamera"));
+	InterRightCamera = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("InterRightCamera"));
+	InterLeftPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InterLeftPlane"));
+	InterRightPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InterRightPlane"));
+	FinalRoot = CreateDefaultSubobject<USceneComponent>(TEXT("FinalRoot"));
+	FinalTwRoot = CreateDefaultSubobject<USceneComponent>(TEXT("FinalTwRoot"));
+	FinalLeftPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FinalLeftPlane"));
+	FinalRightPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FinalRightPlane"));
+
+	// Attachment
+	InterLeftRoot->SetupAttachment(RootComponent);
+	InterRightRoot->SetupAttachment(InterLeftRoot);
+	InterLeftPlaneRotationRoot->SetupAttachment(InterLeftRoot);
+	InterRightPlaneRotationRoot->SetupAttachment(InterRightRoot);
+	InterLeftPlaneTranslationRoot->SetupAttachment(InterLeftPlaneRotationRoot);
+	InterRightPlaneTranslationRoot->SetupAttachment(InterRightPlaneRotationRoot);
+	InterLeftCamera->SetupAttachment(InterLeftRoot);
+	InterRightCamera->SetupAttachment(InterRightRoot);
+	InterLeftPlane->SetupAttachment(InterLeftPlaneTranslationRoot);
+	InterRightPlane->SetupAttachment(InterRightPlaneTranslationRoot);
+	FinalRoot->SetupAttachment(RootComponent);
+	FinalTwRoot->SetupAttachment(FinalRoot);
+	FinalLeftPlane->SetupAttachment(FinalTwRoot);
+	FinalRightPlane->SetupAttachment(FinalTwRoot);
+
+	// Initial camera setup
+	InterLeftCamera->bCaptureEveryFrame = true;
+	InterLeftCamera->bCaptureOnMovement = false;
+	InterLeftCamera->SetAutoActivate(false);
+	InterRightCamera->bCaptureEveryFrame = true;
+	InterRightCamera->bCaptureOnMovement = false;
+	InterRightCamera->SetAutoActivate(false);
+
+	// Add static mesh to planes
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> PlaneMesh(TEXT("StaticMesh'/Stereolabs/ZED/Shapes/SM_Plane_100x100.SM_Plane_100x100'"));
+	InterLeftPlane->SetStaticMesh(PlaneMesh.Object);
+	InterRightPlane->SetStaticMesh(PlaneMesh.Object);
+	FinalLeftPlane->SetStaticMesh(PlaneMesh.Object);
+	FinalRightPlane->SetStaticMesh(PlaneMesh.Object);
+
+	// Initial planes rotation setup
+	InterLeftPlane->SetRelativeRotation(FRotator(0, 90, 90));
+	InterRightPlane->SetRelativeRotation(FRotator(0, 90, 90));
+	FinalLeftPlane->SetRelativeRotation(FRotator(0, 90, 90));
+	FinalRightPlane->SetRelativeRotation(FRotator(0, 90, 90));
+
+	// Remove collision
+	InterLeftPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	InterRightPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	FinalLeftPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	FinalRightPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Remove shadow cast
+	InterLeftPlane->SetCastShadow(false);
+	InterRightPlane->SetCastShadow(false);
+	FinalLeftPlane->SetCastShadow(false);
+	FinalRightPlane->SetCastShadow(false);
+
+	// Set light channels
+	InterLeftPlane->LightingChannels.bChannel0 = false;
+	InterRightPlane->LightingChannels.bChannel0 = false;
+	FinalLeftPlane->LightingChannels.bChannel0 = false;
+	FinalRightPlane->LightingChannels.bChannel0 = false;
+	InterLeftPlane->LightingChannels.bChannel3 = true;
+	InterRightPlane->LightingChannels.bChannel3 = true;
 }
 
 void AZEDCamera::BeginPlay()
@@ -75,7 +148,7 @@ void AZEDCamera::BeginPlay()
 
 	GSlCameraProxy->OnCameraClosed.AddDynamic(this, &AZEDCamera::CameraClosed);
 
-	CameraRenderPlaneDistance = GNearClippingPlane;
+	CameraRenderPlaneDistance = GNearClippingPlane +0.001;
 }
 
 void AZEDCamera::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -130,7 +203,7 @@ void AZEDCamera::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEv
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlRenderingParameters, PerceptionDistance))
 	{
-		UpdatePlanesSize();
+		UpdatePlanesSizeCpp();
 	}
 
 	Super::PostEditChangeProperty(PropertyChangedEvent);
@@ -281,17 +354,18 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			{
 				// Update HMD planes rotation
 				//SetHMDPlanesRotation(TrackingData.IMURotator);
-				SetHMDPlanesRotation(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
+				SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
 			}
 			else
 			{
 				// Update HMD planes rotation
-				SetHMDPlanesRotation(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
+				SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
 			}
 		}
 
+
 		// Update HMD planes location
-		SetHMDPlanesLocation(HMDLocation);
+		SetHMDPlanesLocationCpp(HMDLocation);
 
 		if (bUpdateTracking)
 		{
@@ -319,17 +393,65 @@ void AZEDCamera::Tick(float DeltaSeconds)
 	// Update tracking data
 	if (bUpdateTracking)
 	{
-		GZedTrackingData = TrackingData;
+		if (RenderingMode == ESlRenderingMode::RM_Stereo && TrackingParameters.TrackingType == ETrackingType::TrT_HMD)
+		{
+			// latency transform
+			sl::Transform SlLatencyTransform;
+			// Latency corrector
+			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.Timestamp, SlLatencyTransform);
+			FTransform latencyTransform = sl::unreal::ToUnrealType(SlLatencyTransform);
 
-		GZedRawLocation = TrackingData.ZedWorldTransform.GetLocation();
-		GZedRawRotation = TrackingData.ZedWorldTransform.Rotator();
+			FZEDTrackingData TmpTrackingData;
+			TmpTrackingData.OffsetZedWorldTransform = latencyTransform;
+			TmpTrackingData.ZedWorldTransform = AntiDriftParameters.CalibrationTransform * TmpTrackingData.OffsetZedWorldTransform;
+			OnTrackingDataUpdated.Broadcast(TmpTrackingData);
 
-		GZedViewPointLocation = TrackingData.OffsetZedWorldTransform.GetLocation();
-		GZedViewPointRotation = TrackingData.OffsetZedWorldTransform.Rotator();
+			GZedRawLocation = TmpTrackingData.ZedWorldTransform.GetLocation();
+			GZedRawRotation = TmpTrackingData.ZedWorldTransform.Rotator();
 
-		OnTrackingDataUpdated.Broadcast(TrackingData);
+			GZedViewPointLocation = TmpTrackingData.OffsetZedWorldTransform.GetLocation();
+			GZedViewPointRotation = TmpTrackingData.OffsetZedWorldTransform.Rotator();
+
+			GZedTrackingData = TmpTrackingData;
+		}
+		else if (RenderingMode == ESlRenderingMode::RM_Stereo && TrackingParameters.TrackingType == ETrackingType::TrT_Mixte)
+		{
+			// latency transform
+			sl::Transform SlLatencyTransform;
+			// Latency corrector
+			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.Timestamp, SlLatencyTransform);
+			FTransform latencyTransform = sl::unreal::ToUnrealType(SlLatencyTransform);
+
+			FZEDTrackingData TmpTrackingData;
+			TmpTrackingData.OffsetZedWorldTransform.SetLocation(latencyTransform.GetLocation());
+
+			TmpTrackingData.OffsetZedWorldTransform.SetRotation((AntiDriftParameters.CalibrationTransform.Inverse() * FTransform(TrackingData.IMURotator)).GetRotation());
+
+			TmpTrackingData.ZedWorldTransform = AntiDriftParameters.CalibrationTransform * TmpTrackingData.OffsetZedWorldTransform;
+
+			OnTrackingDataUpdated.Broadcast(TmpTrackingData);
+
+			GZedRawLocation = TmpTrackingData.ZedWorldTransform.GetLocation();
+			GZedRawRotation = TmpTrackingData.ZedWorldTransform.Rotator();
+
+			GZedViewPointLocation = TmpTrackingData.OffsetZedWorldTransform.GetLocation();
+			GZedViewPointRotation = TmpTrackingData.OffsetZedWorldTransform.Rotator();
+
+			GZedTrackingData = TmpTrackingData;
+		}
+		else
+		{
+			GZedTrackingData = TrackingData;
+
+			GZedRawLocation = TrackingData.ZedWorldTransform.GetLocation();
+			GZedRawRotation = TrackingData.ZedWorldTransform.Rotator();
+
+			GZedViewPointLocation = TrackingData.OffsetZedWorldTransform.GetLocation();
+			GZedViewPointRotation = TrackingData.OffsetZedWorldTransform.Rotator();
+
+			OnTrackingDataUpdated.Broadcast(TrackingData);
+		}
 	}
-
 
 	// Depth texture quality, normals will have the same size for performance purpose
 	int32 GDepthTextureSizePreset = CVarZEDDepthTextureQualityPreset.GetValueOnGameThread();
@@ -478,7 +600,10 @@ void AZEDCamera::GrabCallback(ESlErrorCode ErrorCode, const FSlTimestamp& Timest
 
 			if (IMUErrorCode == sl::ERROR_CODE::SUCCESS)
 			{
-				CurrentFrameTrackingData.IMURotator = sl::unreal::ToUnrealType(IMUData.pose_data.getRotation()).Rotator();
+				sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+				sl::Rotation Pp = P;
+				Pp.transpose();
+				CurrentFrameTrackingData.IMURotator = sl::unreal::ToUnrealType(P * IMUData.pose_data.getRotation() * Pp).Rotator();
 			}
 #if WITH_EDITOR
 			else
@@ -648,11 +773,11 @@ void AZEDCamera::Init(bool bHMDEnabled)
 
 	if (bHMDEnabled)
 	{
-		if (GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType()== EHMDDeviceType::Type::DT_OculusRift)
-		sl::mr::latencyCorrectorInitialize(sl::mr::eHmdType_Oculus);
-		else if (GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType() == EHMDDeviceType::Type::DT_SteamVR)
-		sl::mr::latencyCorrectorInitialize(sl::mr::eHmdType_Vive);
-
+		FName deviceType = GEngine->XRSystem->GetSystemName();
+		if(deviceType == TEXT("OculusHMD"))
+			sl::mr::latencyCorrectorInitialize(sl::mr::eHmdType_Oculus);
+		else if (deviceType == TEXT("SteamVR"))
+			sl::mr::latencyCorrectorInitialize(sl::mr::eHmdType_Vive);
 
 		if (TrackingParameters.bEnableTracking)
 		{
@@ -660,7 +785,7 @@ void AZEDCamera::Init(bool bHMDEnabled)
 		}
 
 		// Set first delay to 1.0f to fix HMD planes wrong location at startup
-		GetWorldTimerManager().SetTimer(PlanesAntiDriftTimerHandle, this, &AZEDCamera::CorrectHMDPlanesDrift, 10.0f, true, 1.0f);
+		GetWorldTimerManager().SetTimer(PlanesAntiDriftTimerHandle, this, &AZEDCamera::CorrectHMDPlanesDriftCpp, 10.0f, true, 1.0f);
 	}
 
 	SetCameraSettings(CameraSettings);
@@ -682,6 +807,8 @@ void AZEDCamera::Init(bool bHMDEnabled)
 
 	Batch->AddTexture(LeftEyeColor);
 
+	HMDLeftEyeMaterialInstanceDynamic = UMaterialInstanceDynamic::Create(HMDLeftEyeSourceMaterial, nullptr);
+
 	if (!bHMDEnabled)
 	{
 		Batch->AddTexture(LeftEyeDepth);
@@ -691,7 +818,6 @@ void AZEDCamera::Init(bool bHMDEnabled)
 	{
 		GSlCameraProxy->HMDToCameraOffset = AntiDriftParameters.CalibrationTransform.GetLocation().X;
 
-		HMDLeftEyeMaterialInstanceDynamic = UMaterialInstanceDynamic::Create(HMDLeftEyeSourceMaterial, nullptr);
 		HMDRightEyeMaterialInstanceDynamic = UMaterialInstanceDynamic::Create(HMDRightEyeSourceMaterial, nullptr);
 
 		ZedRightEyeMaterialInstanceDynamic = UMaterialInstanceDynamic::Create(ZedSourceMaterial, nullptr);
@@ -706,7 +832,6 @@ void AZEDCamera::Init(bool bHMDEnabled)
 			ZedRightEyeMaterialInstanceDynamic->SetTextureParameterValue("Normals", RightEyeNormals->Texture);
 		}
 
-		Batch->AddTexture(LeftEyeColor);
 		Batch->AddTexture(RightEyeColor);
 		if (bCurrentDepthEnabled)
 		{
@@ -722,7 +847,7 @@ void AZEDCamera::Init(bool bHMDEnabled)
 		GrabCallback(ErrorCode, Timestamp);
 	});
 
-	InitializeRendering();
+	InitializeRenderingCpp();
 
 	OnCameraActorInitialized.Broadcast();
 
@@ -842,4 +967,231 @@ bool AZEDCamera::InitializeDriftCorrectorConstOffset(const FVector& HMDLocation,
 	}
 
 	return false;
+}
+
+void AZEDCamera::AdjustLatencyCorrectionOffset(const unsigned long long time)
+{
+	sl::mr::latencyCorrectorAdjOffset(static_cast<sl::timeStamp>(time));
+}
+
+void AZEDCamera::ToggleFinalComponents(bool enable, bool stereo)
+{
+	FinalLeftPlane->SetVisibility(enable);
+	if(stereo)
+		FinalRightPlane->SetVisibility(enable);
+	else
+		FinalRightPlane->SetVisibility(false);
+}
+
+void AZEDCamera::ToggleInterComponents(bool enable, bool stereo)
+{
+	InterLeftPlane->SetVisibility(enable);
+	InterLeftCamera->SetActive(enable);
+	if (stereo)
+	{
+		InterRightPlane->SetVisibility(enable);
+		InterRightCamera->SetActive(enable);
+	}
+	else
+	{
+		InterRightPlane->SetVisibility(false);
+		InterRightCamera->SetActive(false);
+	}
+}
+
+void AZEDCamera::SetupComponents(bool stereo)
+{
+	// Rectified camera param used for the setup (left = right in rectified)
+	FSlCameraParameters cameraParam = USlFunctionLibrary::GetCameraProxy()->CameraInformation.CalibrationParameters.LeftCameraParameters;
+
+	// Setup final plane material and render targets
+	LeftEyeRenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), cameraParam.Resolution.X, cameraParam.Resolution.Y, ETextureRenderTargetFormat::RTF_RGBA8);
+	HMDLeftEyeMaterialInstanceDynamic->SetTextureParameterValue("RealVirtual", LeftEyeRenderTarget);
+	InterLeftCamera->TextureTarget = LeftEyeRenderTarget;
+	InterLeftCamera->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+	FinalLeftPlane->SetMaterial(0, HMDLeftEyeMaterialInstanceDynamic);
+	if (stereo)
+	{
+		RightEyeRenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), cameraParam.Resolution.X, cameraParam.Resolution.Y, ETextureRenderTargetFormat::RTF_RGBA8);
+		HMDRightEyeMaterialInstanceDynamic->SetTextureParameterValue("RealVirtual", RightEyeRenderTarget);
+		InterRightCamera->TextureTarget = RightEyeRenderTarget;
+		InterRightCamera->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+		FinalRightPlane->SetMaterial(0, HMDRightEyeMaterialInstanceDynamic);
+	}
+
+	// Set camera FOV
+	InterLeftCamera->FOVAngle = cameraParam.HFOV;
+	if (stereo)
+		InterRightCamera->FOVAngle = cameraParam.HFOV;
+
+	// Set plane size
+	SetPlaneSize(InterLeftPlane, CameraRenderPlaneDistance);
+	if (stereo)
+	{
+		SetPlaneSize(InterRightPlane, CameraRenderPlaneDistance);
+		if (RenderingParameters.SRemapEnable)
+		{
+			FVector2D HmdFocal = USlFunctionLibrary::GetHmdFocale();
+			float finalPlaneDistanceSRemap = HMDRenderPlaneDistance * cameraParam.HFocal / ((HmdFocal.X + HmdFocal.Y) / 2.0f);
+			SetPlaneSize(FinalLeftPlane, finalPlaneDistanceSRemap);
+			SetPlaneSize(FinalRightPlane, finalPlaneDistanceSRemap);
+		}
+		else
+		{
+			SetPlaneSizeWithGamma(FinalLeftPlane, HMDRenderPlaneDistance);
+			SetPlaneSizeWithGamma(FinalRightPlane, HMDRenderPlaneDistance);
+		}
+	}
+	else
+	{
+		SetPlaneSize(FinalLeftPlane, HMDRenderPlaneDistance);
+	}
+	
+
+	// Inter baseline offset
+	if (stereo)
+		InterRightRoot->SetRelativeLocation(FVector(0, 2.0f*USlFunctionLibrary::GetCameraProxy()->CameraInformation.HalfBaseline, 0));
+
+	// Forward offset Inter
+	InterLeftPlaneTranslationRoot->SetRelativeLocation(FVector(CameraRenderPlaneDistance, 0, 0));
+	if (stereo)
+		InterRightPlaneTranslationRoot->SetRelativeLocation(FVector(CameraRenderPlaneDistance, 0, 0));
+
+	// Forward offset + optical center offset + baseline offset (Final planes)
+	FVector4 opticalCenterOffsetsFinal = USlFunctionLibrary::GetOpticalCentersOffsets(cameraParam.Resolution, HMDRenderPlaneDistance);
+	FinalLeftPlane->SetRelativeLocation(FVector(HMDRenderPlaneDistance, opticalCenterOffsetsFinal.X, -opticalCenterOffsetsFinal.Y));
+	FinalLeftPlane->AddLocalOffset(FVector(-USlFunctionLibrary::GetCameraProxy()->CameraInformation.HalfBaseline, 0, 0));
+	if (stereo)
+	{
+		FinalRightPlane->SetRelativeLocation(FVector(HMDRenderPlaneDistance, opticalCenterOffsetsFinal.Z, -opticalCenterOffsetsFinal.W));
+		FinalRightPlane->AddLocalOffset(FVector(USlFunctionLibrary::GetCameraProxy()->CameraInformation.HalfBaseline, 0, 0));
+	}
+
+	// Optical center and baseline offsets (Inter planes)
+	FVector4 opticalCenterOffsets = USlFunctionLibrary::GetOpticalCentersOffsets(cameraParam.Resolution, CameraRenderPlaneDistance);
+	InterLeftPlane->SetRelativeLocation(FVector(0, opticalCenterOffsets.X, -opticalCenterOffsets.Y));
+	if (stereo)
+		InterRightPlane->SetRelativeLocation(FVector(0, opticalCenterOffsets.Z, -opticalCenterOffsets.W));
+
+	// Set inter planes materials
+	InterLeftPlane->SetMaterial(0, ZedLeftEyeMaterialInstanceDynamic);
+	if (stereo)
+		InterRightPlane->SetMaterial(0, ZedRightEyeMaterialInstanceDynamic);
+
+	// Set camera projection matrix
+	InterLeftCamera->bUseCustomProjectionMatrix = true;
+	USlFunctionLibrary::GetSceneCaptureProjectionMatrix(InterLeftCamera->CustomProjectionMatrix, ESlEye::E_Left);
+	if (stereo)
+	{
+		InterRightCamera->bUseCustomProjectionMatrix = true;
+		USlFunctionLibrary::GetSceneCaptureProjectionMatrix(InterRightCamera->CustomProjectionMatrix, ESlEye::E_Right);
+	}
+
+	// Set calibration Zed-HMD
+	InterLeftRoot->SetRelativeLocation(AntiDriftParameters.CalibrationTransform.GetLocation());
+	InterLeftPlaneRotationRoot->SetRelativeRotation(AntiDriftParameters.CalibrationTransform.GetRotation());
+	if (stereo)
+		InterRightPlaneRotationRoot->SetRelativeRotation(AntiDriftParameters.CalibrationTransform.GetRotation());
+
+	// Spectator screen texture
+	if (stereo)
+	{
+		UHeadMountedDisplayFunctionLibrary::SetSpectatorScreenTexture(InterLeftCamera->TextureTarget);
+		UHeadMountedDisplayFunctionLibrary::SetSpectatorScreenMode(ESpectatorScreenMode::Texture);
+	}
+
+	// Show only list management
+	InterLeftCamera->HideComponent(FinalLeftPlane);
+	InterLeftCamera->HideComponent(FinalRightPlane);
+	UZEDFunctionLibrary::GetPlayerController(this)->bUseShowOnlyList = true;
+	UZEDFunctionLibrary::GetPlayerController(this)->EmptyShowOnlyComponentList();
+	UZEDFunctionLibrary::GetPlayerController(this)->AddShowOnlyComponent(FinalLeftPlane);
+	if (stereo)
+	{
+		InterRightCamera->HideComponent(FinalLeftPlane);
+		InterRightCamera->HideComponent(FinalRightPlane);
+		UZEDFunctionLibrary::GetPlayerController(this)->AddShowOnlyComponent(FinalRightPlane);
+	}
+}
+
+void AZEDCamera::SetPlaneSizeWithGamma(UStaticMeshComponent* plane, float planeDistance)
+{
+	FSlCameraParameters cameraParam = USlFunctionLibrary::GetCameraProxy()->CameraInformation.CalibrationParameters.LeftCameraParameters;
+	
+	FVector2D planeSize = USlFunctionLibrary::GetRenderPlaneSizeWithGamma(this, cameraParam.Resolution, RenderingParameters.PerceptionDistance, cameraParam.HFocal, planeDistance/100.0f); // because plane is already of side 100
+	plane->SetWorldScale3D(FVector(planeSize.X, planeSize.Y, 1.0f));
+}
+
+void AZEDCamera::SetPlaneSize(UStaticMeshComponent* plane, float planeDistance)
+{
+	FSlCameraParameters cameraParam = USlFunctionLibrary::GetCameraProxy()->CameraInformation.CalibrationParameters.LeftCameraParameters;
+	
+	FVector2D planeSize = USlFunctionLibrary::GetRenderPlaneSize(cameraParam.Resolution, cameraParam.VFOV, planeDistance/100.0f); // because plane is already of side 100
+	plane->SetWorldScale3D(FVector(planeSize.X, planeSize.Y, 1.0f));
+}
+
+void AZEDCamera::AddOrUpdatePostProcessCpp(UMaterialInterface* NewPostProcess, float NewWeight)
+{
+	InterLeftCamera->AddOrUpdateBlendable(NewPostProcess, NewWeight);
+	InterRightCamera->AddOrUpdateBlendable(NewPostProcess, NewWeight);
+}
+
+void AZEDCamera::SetHMDPlanesLocationCpp(const FVector& NewLocation)
+{
+	FinalRoot->SetRelativeLocation(NewLocation);
+}
+
+void AZEDCamera::SetHMDPlanesRotationCpp(const FRotator& Rotation)
+{
+	FinalTwRoot->SetRelativeRotation(Rotation);
+}
+
+void AZEDCamera::CorrectHMDPlanesDriftCpp()
+{
+	FinalTwRoot->SetRelativeLocation(FVector(0,0,0));
+}
+
+void AZEDCamera::DisableRenderingCpp()
+{
+	bool stereo = false;
+	if (RenderingMode == ESlRenderingMode::RM_Stereo)
+		stereo = true;
+
+	ToggleInterComponents(false, stereo);
+	ToggleFinalComponents(false, stereo);
+}
+
+void AZEDCamera::InitializeRenderingCpp()
+{
+	bool stereo = false;
+	if (RenderingMode == ESlRenderingMode::RM_Stereo)
+		stereo = true;
+
+	SetupComponents(stereo);
+	ToggleInterComponents(true, stereo);
+	ToggleFinalComponents(true, stereo);
+}
+
+void AZEDCamera::UpdatePlanesSizeCpp()
+{
+	if (RenderingMode == ESlRenderingMode::RM_Stereo)
+	{
+		if (RenderingParameters.SRemapEnable)
+		{
+			FSlCameraParameters cameraParam = USlFunctionLibrary::GetCameraProxy()->CameraInformation.CalibrationParameters.LeftCameraParameters;
+			FVector2D HmdFocal = USlFunctionLibrary::GetHmdFocale();
+			float finalPlaneDistanceSRemap = HMDRenderPlaneDistance * cameraParam.HFOV / ((HmdFocal.X + HmdFocal.Y) / 2.0f);
+			SetPlaneSize(FinalLeftPlane, finalPlaneDistanceSRemap);
+			SetPlaneSize(FinalRightPlane, finalPlaneDistanceSRemap);
+		}
+		else
+		{
+			SetPlaneSizeWithGamma(FinalLeftPlane, HMDRenderPlaneDistance);
+			SetPlaneSizeWithGamma(FinalRightPlane, HMDRenderPlaneDistance);
+		}
+	}
+	else
+	{
+		SetPlaneSizeWithGamma(FinalLeftPlane, HMDRenderPlaneDistance);
+	}
 }

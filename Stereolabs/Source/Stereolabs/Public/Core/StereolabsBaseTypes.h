@@ -316,9 +316,7 @@ enum class ESlErrorCode : uint8
 	EC_InvalidAreaFile			   UMETA(DisplayName = "Invalid area file"),
 	EC_IncompatibleAreaFile		   UMETA(DisplayName = "Incompatible area file"),
 	EC_CameraDetectionIssue		   UMETA(DisplayName = "Camera detection issue"),
-	EC_CameraFailedtoSetup		   UMETA(DisplayName = "Failed to setup camera"),
 	EC_CameraAlreadyInUse		   UMETA(DisplayName = "Camera used by another process"),
-	EC_NoGPUDetected		       UMETA(DisplayName = "No GPU detected"),
 	// ERROR_CODE_LAST
 	EC_None					  	   UMETA(DisplayName = "No error") 
 };
@@ -449,6 +447,21 @@ enum class ESlSelfCalibrationState : uint8
 	SCS_Running				UMETA(DisplayName = "Running"),
 	SCS_Failed				UMETA(DisplayName = "Failed"),
 	SCS_Success				UMETA(DisplayName = "Success"),
+};
+
+/*
+* Tracking type selection
+* Allow to chose which tracking is selected for the pawn.
+* ZED : Zed tracking only
+* HMD : Hmd tracking only
+* Mixte : Zed Imu rotations and Hmd translations
+*/
+UENUM(BlueprintType, Category = "Stereolabs|Enum")
+enum class ETrackingType : uint8
+{
+	TrT_ZED			UMETA(DisplayName = "Zed"),
+	TrT_HMD			UMETA(DisplayName = "Hmd"),
+	TrT_Mixte		UMETA(DisplayName = "Mixte"),
 };
 
 /************************************************************************/
@@ -1235,7 +1248,8 @@ struct STEREOLABS_API FSlTrackingParameters
 		bEnablePoseSmoothing(true),
 		bLoadSpatialMemoryFile(false),
 		SpatialMemoryFileLoadingPath(""),
-		SpatialMemoryFileSavingPath("")
+		SpatialMemoryFileSavingPath(""),
+		TrackingType(ETrackingType::TrT_ZED)
 	{
 	}
 
@@ -1296,6 +1310,15 @@ struct STEREOLABS_API FSlTrackingParameters
 			Rotation,
 			*Path
 			);
+
+		int32 ConfigTrackingType;
+		GConfig->GetInt(
+			Section,
+			TEXT("TrackingType"),
+			ConfigTrackingType,
+			*Path
+		);
+		TrackingType = (ETrackingType)ConfigTrackingType;
 	}
 
 	FORCEINLINE void Save(const FString& Path) const
@@ -1355,6 +1378,13 @@ struct STEREOLABS_API FSlTrackingParameters
 			Rotation,
 			*Path
 			);
+
+		GConfig->SetInt(
+			Section,
+			TEXT("TrackingType"),
+			static_cast<int32>(TrackingType),
+			*Path
+		);
 	}
 
 	/*
@@ -1396,6 +1426,15 @@ struct STEREOLABS_API FSlTrackingParameters
 	/** Path to area file */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString SpatialMemoryFileSavingPath;
+
+	/** Tracking type 
+	* Allow to chose which tracking is selected for the pawn.
+	* ZED : Zed tracking only
+	* HMD : Hmd tracking only
+	* Mixte : Zed Imu rotations and Hmd translations
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ETrackingType TrackingType;
 };
 
 /*
@@ -1975,6 +2014,7 @@ struct STEREOLABS_API FSlRenderingParameters
 	FSlRenderingParameters()
 		:
 		PerceptionDistance(100.0f),
+		SRemapEnable(false),
 		ThreadingMode(ESlThreadingMode::TM_MultiThreaded)
 	{}
 
@@ -1986,6 +2026,13 @@ struct STEREOLABS_API FSlRenderingParameters
 			PerceptionDistance,
 			*Path
 			);
+
+		GConfig->GetBool(
+			Section,
+			TEXT("SRemapEnable"),
+			SRemapEnable,
+			*Path
+		);
 
 		int32 ConfigThreadingMode;
 		GConfig->GetInt(
@@ -2006,6 +2053,13 @@ struct STEREOLABS_API FSlRenderingParameters
 			*Path
 			);
 
+		GConfig->SetBool(
+			Section,
+			TEXT("SRemapEnable"),
+			SRemapEnable,
+			*Path
+		);
+
 		GConfig->SetInt(
 			Section,
 			TEXT("ThreadingMode"),
@@ -2015,8 +2069,12 @@ struct STEREOLABS_API FSlRenderingParameters
 	}
 
 	/** Distance in cm at which real object perfectly match their real size, between 75 and 300. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "75", ClampMax = "300"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "75", ClampMax = "3000"))
 	float PerceptionDistance;
+
+	/** ! Experimental ! : enable SRemap. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool SRemapEnable;
 
 	/** Threading mode of the Grab. Multithreading is recommended for better performance. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

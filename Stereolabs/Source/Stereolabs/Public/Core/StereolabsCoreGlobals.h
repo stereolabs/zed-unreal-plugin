@@ -301,12 +301,8 @@ namespace sl
 					return ESlErrorCode::EC_IncompatibleAreaFile;
 				case sl::ERROR_CODE::ERROR_CODE_CAMERA_DETECTION_ISSUE:
 					return ESlErrorCode::EC_CameraDetectionIssue;
-				case sl::ERROR_CODE::ERROR_CODE_CAMERA_FAILED_TO_SETUP:
-					return ESlErrorCode::EC_CameraFailedtoSetup;
 				case sl::ERROR_CODE::ERROR_CODE_CAMERA_ALREADY_IN_USE:
 					return ESlErrorCode::EC_CameraAlreadyInUse;
-				case sl::ERROR_CODE::ERROR_CODE_NO_GPU_DETECTED:
-					return ESlErrorCode::EC_NoGPUDetected;
 				case sl::ERROR_CODE::ERROR_CODE_LAST:
 					return ESlErrorCode::EC_None;
 				default:
@@ -691,24 +687,24 @@ namespace sl
 				}
 			}
 		}
-
+		
 		/*
 		 * Convert from EStereoRenderingDeviceType to sl::mr::HMD_DEVICE_TYPE
 		 */
-		FORCEINLINE sl::mr::HMD_DEVICE_TYPE ToSlType(EHMDDeviceType::Type UnrealType)
+		FORCEINLINE sl::mr::HMD_DEVICE_TYPE ToSlType(FName UnrealType)
 		{
-			switch (UnrealType)
+			if (UnrealType == TEXT("SteamVR"))
 			{
-				case EHMDDeviceType::DT_OculusRift:
-					return sl::mr::HMD_DEVICE_TYPE::HMD_DEVICE_TYPE_OCULUS;
-				case EHMDDeviceType::DT_SteamVR:
-					return sl::mr::HMD_DEVICE_TYPE::HMD_DEVICE_TYPE_HTC;
-				default:
-				{
-					ensureMsgf(false, TEXT("Unhandled EHMDDeviceType entry %u"), (uint32)UnrealType);
-
-					return (sl::mr::HMD_DEVICE_TYPE)0;
-				}
+				return sl::mr::HMD_DEVICE_TYPE::HMD_DEVICE_TYPE_HTC;
+			}
+			else if (UnrealType == TEXT("OculusHMD"))
+			{
+				return sl::mr::HMD_DEVICE_TYPE::HMD_DEVICE_TYPE_OCULUS;
+			}
+			else
+			{
+				ensureMsgf(false, TEXT("Unhandled HMD device type FName entry"));
+				return sl::mr::HMD_DEVICE_TYPE::HMD_DEVICE_TYPE_UNKNOWN;
 			}
 		}
 
@@ -769,12 +765,8 @@ namespace sl
 					return sl::ERROR_CODE::ERROR_CODE_INCOMPATIBLE_AREA_FILE;
 				case ESlErrorCode::EC_CameraDetectionIssue:
 					return sl::ERROR_CODE::ERROR_CODE_CAMERA_DETECTION_ISSUE;
-				case ESlErrorCode::EC_CameraFailedtoSetup:
-					return sl::ERROR_CODE::ERROR_CODE_CAMERA_FAILED_TO_SETUP;
 				case ESlErrorCode::EC_CameraAlreadyInUse:
 					return sl::ERROR_CODE::ERROR_CODE_CAMERA_ALREADY_IN_USE;
-				case ESlErrorCode::EC_NoGPUDetected:
-					return sl::ERROR_CODE::ERROR_CODE_NO_GPU_DETECTED;
 				case ESlErrorCode::EC_None:
 					return sl::ERROR_CODE::ERROR_CODE_LAST;
 				default:

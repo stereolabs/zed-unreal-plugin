@@ -18,7 +18,7 @@ DEFINE_LOG_CATEGORY(ZEDPlayerController);
 
 #define MONO_NOISE_OFFSET 0.85f
 #define STEREO_NOISE_OFFSET 0.35f
-#define STEREO_BLUR_SIGMA 0.5f
+#define STEREO_BLUR_SIGMA 0.35f
 
 #define ADD_FVECTOR_2D(Vector, Value)\
 	Vector.X += Value;\
@@ -84,9 +84,6 @@ AZEDPlayerController::AZEDPlayerController()
 
 	static ConstructorHelpers::FObjectFinder<UMaterial> PostProcessZedMaterial(TEXT("Material'/Stereolabs/ZED/Materials/M_ZED_PostProcess.M_ZED_PostProcess'"));
 	PostProcessZedSourceMaterial = PostProcessZedMaterial.Object;
-
-	static ConstructorHelpers::FObjectFinder<UClass> ZedCameraBlueprint(TEXT("'/Stereolabs/ZED/Blueprints/BP_ZED_Camera.BP_ZED_Camera_C'"));
-	ZedCameraBlueprintClass = ZedCameraBlueprint.Object;
 	
 	static ConstructorHelpers::FObjectFinder<UCurveFloat> FadeCurve(TEXT("CurveFloat'/Stereolabs/ZED/Utility/C_Fade.C_Fade'"));
 	FadeTimelineCurve = FadeCurve.Object;
@@ -111,18 +108,14 @@ void AZEDPlayerController::PostRenderFor(APlayerController* PC, UCanvas* Canvas,
 	
 	if (bHMDEnabled)
 	{
-		EHMDDeviceType::Type Type = GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType();
-
-		switch (Type)
+		FName Type = GEngine->XRSystem->GetSystemName();
+		if (Type == TEXT("SteamVR"))
 		{
-		
-			case EHMDDeviceType::DT_SteamVR:
-				Position = FVector2D(290.00f, 420.0f);
-				break;
-			case EHMDDeviceType::DT_OculusRift:
-			default:
-				Position = FVector2D(290.0f, 395.0f);
-				break;
+			Position = FVector2D(290.00f, 420.0f);
+		}
+		else if (Type == TEXT("OculusHMD"))
+		{
+			Position = FVector2D(290.0f, 395.0f);
 		}
 	}
 
@@ -157,7 +150,7 @@ void AZEDPlayerController::PostRenderFor(APlayerController* PC, UCanvas* Canvas,
 	{
 		Color = FColor::Green;
 
-		if (GSlCameraProxy->GetCameraFPS() < 60.0f)
+		if (GSlCameraProxy->GetCameraFPS() < 50.0f)
 		{
 			FCanvasTextItem String(Position, FText::FromString(FString("Selected ZED camera FPS is too low : Choose 60 FPS")), Font, Color);
 			String.Scale = Scale;
@@ -192,7 +185,7 @@ void AZEDPlayerController::Tick(float DeltaSeconds)
 		ZedCamera->Tick(DeltaSeconds);
 
 		ZEDFPS = GSlCameraProxy->GetCurrentFPS();
-		if (ZEDFPS <= 55.0f)
+		if (ZEDFPS <= 50.0f)
 		{
 			// Hitch
 			if (CurrentCameraFPSTimerGoodFPS < 4.0f && CurrentCameraFPSTimerBadFPS == 2.0f)
@@ -231,7 +224,7 @@ void AZEDPlayerController::Tick(float DeltaSeconds)
 			}
 		}
 
-		if (1.0f / DeltaSeconds <= 60.0f)
+		if (1.0f / DeltaSeconds <= 50.0f)
 		{
 			// Hitch
 			if (CurrentFPSTimerGoodFPS < 4.0f && CurrentFPSTimerBadFPS == 2.0f)
@@ -314,54 +307,64 @@ void AZEDPlayerController::BeginPlay()
 
 	if (bUseDefaultBeginPlay)
 	{
-		// Standalone
-		if (bIsStandalone)
+		MakeDefaultInit();
+	}
+}
+
+void AZEDPlayerController::MakeDefaultInit()
+{
+	bIsFirstPlayer = (GetWorld()->GetFirstPlayerController() == this);
+
+	bool bIsStandalone = UKismetSystemLibrary::IsStandalone(this);
+	bool bIsLocal = IsLocalPlayerController();
+
+	// Standalone
+	if (bIsStandalone)
+	{
+		SpawnPawn(PawnClass);
+
+		// First player
+		if (bIsFirstPlayer)
+		{
+			SpawnZedCameraActor();
+
+			Init();
+		}
+	}
+	// Client or server
+	else
+	{
+		// Server
+		if (HasAuthority())
 		{
 			SpawnPawn(PawnClass);
 
-			// First player
-			if (bIsFirstPlayer)
+			// Listen server controller and first player
+			if (bIsLocal && bIsFirstPlayer)
 			{
 				SpawnZedCameraActor();
 
 				Init();
 			}
 		}
-		// Client or server
+		// Client
 		else
 		{
-			// Server
-			if (HasAuthority())
+			// First player
+			if (bIsFirstPlayer)
 			{
-				SpawnPawn(PawnClass);
-
-				// Listen server controller and first player
-				if (bIsLocal && bIsFirstPlayer)
+				// Dedicated server spawn pawn before begin play
+				if (ZedPawn)
 				{
-					SpawnZedCameraActor();
-
-					Init();
+					OnPawnSpawned.Broadcast();
 				}
-			}
-			// Client
-			else
-			{
-				// First player
-				if (bIsFirstPlayer)
+
+				SpawnZedCameraActor();
+
+				// Dedicated server spawn pawn before begin play
+				if (ZedPawn)
 				{
-					// Dedicated server spawn pawn before begin play
-					if (ZedPawn)
-					{
-						OnPawnSpawned.Broadcast();
-					}
-
-					SpawnZedCameraActor();
-
-					// Dedicated server spawn pawn before begin play
-					if (ZedPawn)
-					{
-						Init();
-					}
+					Init();
 				}
 			}
 		}
@@ -421,7 +424,7 @@ UObject* AZEDPlayerController::SpawnPawn(UClass* NewPawnClass, bool bPossess)
 
 void AZEDPlayerController::SpawnZedCameraActor()
 {
-	ZedCamera = GetWorld()->SpawnActor<AZEDCamera>(ZedCameraBlueprintClass);
+	ZedCamera = GetWorld()->SpawnActor<AZEDCamera>();
 }
 
 void AZEDPlayerController::Init()
@@ -484,7 +487,7 @@ void AZEDPlayerController::Internal_CloseZedCamera()
 {
 	GSlCameraProxy->CloseCamera();
 
-	ZedCamera->DisableRendering();
+	ZedCamera->DisableRenderingCpp();
 
 	FadeOut();
 }
@@ -591,6 +594,18 @@ void AZEDPlayerController::ZedCameraOpened()
 {
 	GetWorldTimerManager().ClearTimer(CameraOpeningTimerHandle);
 
+	// Generate AR SRemap
+	if (bHMDEnabled)
+	{
+		// Get Zed initializer object
+		TArray<AActor*> ZedInitializer;
+		UGameplayStatics::GetAllActorsOfClass(this, AZEDInitializer::StaticClass(), ZedInitializer);
+
+		AZEDInitializer* Initializer = static_cast<AZEDInitializer*>(ZedInitializer[0]);
+		if(Initializer->RenderingParameters.SRemapEnable)
+			ZedPawn->InitRemap(GEngine->XRSystem->GetSystemName(), sl::unreal::ToSlType(ZedCamera->InitParameters.Resolution), ZedCamera->RenderingParameters.PerceptionDistance);
+	}
+
 	// Set fade post process
 	ZedPawn->Camera->AddOrUpdateBlendable(PostProcessFadeMaterialInstanceDynamic, 1.0f);
 	// Set camera field of view
@@ -679,23 +694,17 @@ void AZEDPlayerController::ZedCameraActorInitialized()
 	GetHUD()->AddPostRenderedActor(this);
 	GetHUD()->bShowOverlays = true;
 
-	if (!bHMDEnabled)
+	// Set HMD camera offset
+	ZedPawn->SpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+
+	ZedCamera->AddOrUpdatePostProcessCpp(PostProcessZedMaterialInstanceDynamic,  1.0f);
+
+	ZedPawn->Camera->PostProcessSettings.bDeferredAA = false;
+	ZedPawn->Camera->PostProcessSettings.bPostProcessing = false;
+	ZedPawn->Camera->CameraRenderingSettings.bLighting = false;
+
+	if (bHMDEnabled)
 	{
-		ZedPawn->Camera->AddOrUpdateBlendable(PostProcessZedMaterialInstanceDynamic, 1.0f);
-
-		ZedPawn->Camera->PostProcessSettings.bVirtualObjectsPostProcess = true;
-	}
-	else
-	{
-		// Set HMD camera offset
-		ZedPawn->SpringArm->SetRelativeLocation(FVector(ZedCamera->HMDCameraOffset, 0.0f, 0.0f));
-
-		ZedCamera->AddOrUpdatePostProcess(PostProcessZedMaterialInstanceDynamic,  1.0f);
-
-		ZedPawn->Camera->PostProcessSettings.bDeferredAA = false;
-		ZedPawn->Camera->PostProcessSettings.bPostProcessing = false;
-		ZedPawn->Camera->CameraRenderingSettings.bLighting = false;
-
 		FString Command = FString::Printf(TEXT("r.VirtualObjects.BlurSigma %f"), STEREO_BLUR_SIGMA);
 		ConsoleCommand(Command);
 	}
@@ -713,8 +722,8 @@ void AZEDPlayerController::ZedCameraActorInitialized()
 	ZedPawn->ZedLoadingWidget->SetVisibility(false);
 	ZedPawn->ZedErrorWidget->SetVisibility(false);
 
-	bUseShowOnlyList = false;
-	ShowOnlyPrimitiveComponents.Empty();
+	//bUseShowOnlyList = false;
+	//ShowOnlyPrimitiveComponents.Empty();
 
 	GetWorldTimerManager().SetTimer(FadeOutTimerHandle, this, &AZEDPlayerController::FadeOutToGame, 1.0f, false);
 
@@ -723,10 +732,10 @@ void AZEDPlayerController::ZedCameraActorInitialized()
 
 void AZEDPlayerController::ResetHMDTrackingOrigin()
 {
-	EHMDDeviceType::Type Type = GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType();
+	FName Type = GEngine->XRSystem->GetSystemName();
 
 	// If Oculus reset to eye level or offset in tracking
-	if (Type == EHMDDeviceType::DT_OculusRift)
+	if (Type == TEXT("OculusHMD"))
 	{
 		UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Eye);
 	}
@@ -808,18 +817,15 @@ void AZEDPlayerController::DisableFadePostProcess()
 
 void AZEDPlayerController::Internal_ZedCameraDisconnected()
 {
-	if (bHMDEnabled)
-	{
-		ZedPawn->Camera->PostProcessSettings.bDeferredAA = true;
-		ZedPawn->Camera->PostProcessSettings.bPostProcessing = true;
-		ZedPawn->Camera->CameraRenderingSettings.bLighting = true;
-		ZedPawn->Camera->CameraRenderingSettings.bVelocity = true;
-	}
+	ZedPawn->Camera->PostProcessSettings.bDeferredAA = true;
+	ZedPawn->Camera->PostProcessSettings.bPostProcessing = true;
+	ZedPawn->Camera->CameraRenderingSettings.bLighting = true;
+	ZedPawn->Camera->CameraRenderingSettings.bVelocity = true;
 
 	ZedPawn->Camera->PostProcessSettings.bVirtualObjectsPostProcess = false;
 	ZedPawn->Camera->AddOrUpdateBlendable(PostProcessZedMaterialInstanceDynamic, 0.0f);
 
-	ZedCamera->DisableRendering();
+	ZedCamera->DisableRenderingCpp();
 
 	UpdateHUDZedDisconnected();
 
@@ -850,13 +856,14 @@ void AZEDPlayerController::ZedCameraClosed()
 
 	if (!bZedCameraDisconnected)
 	{
+		
+		ZedPawn->Camera->PostProcessSettings.bDeferredAA = true;
+		ZedPawn->Camera->PostProcessSettings.bPostProcessing = true;
+		ZedPawn->Camera->CameraRenderingSettings.bLighting = true;
+		ZedPawn->Camera->CameraRenderingSettings.bVelocity = true;
+
 		if (bHMDEnabled)
 		{
-			ZedPawn->Camera->PostProcessSettings.bDeferredAA = true;
-			ZedPawn->Camera->PostProcessSettings.bPostProcessing = true;
-			ZedPawn->Camera->CameraRenderingSettings.bLighting = true;
-			ZedPawn->Camera->CameraRenderingSettings.bVelocity = true;
-
 			ConsoleCommand(TEXT("vr.SpectatorScreenMode 3"), true);
 		}
 
@@ -971,6 +978,11 @@ void AZEDPlayerController::AddShowOnlyComponent(UPrimitiveComponent* InComponent
 	{
 		ShowOnlyPrimitiveComponents.Add(InComponent);
 	}
+}
+
+void AZEDPlayerController::EmptyShowOnlyComponentList()
+{
+	ShowOnlyPrimitiveComponents.Empty();
 }
 
 void AZEDPlayerController::BuildShowOnlyComponentList(TSet<FPrimitiveComponentId>& ShowOnlyComponentsOut)

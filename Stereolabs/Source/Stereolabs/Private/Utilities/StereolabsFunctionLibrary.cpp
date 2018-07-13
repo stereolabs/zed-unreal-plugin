@@ -7,6 +7,10 @@
 #include <sl_mr_core/latency.hpp>
 #include <sl_mr_core/Rendering.hpp>
 
+#include <iostream>
+#include <fstream>
+#include <string>
+
 DEFINE_LOG_CATEGORY(SLFunctionLibrary);
 
 float USlFunctionLibrary::ConvertDepthToDistance(const FSlViewportHelper& ViewportHelper, const FVector2D& ScreenPosition, float Depth)
@@ -46,7 +50,7 @@ FVector2D USlFunctionLibrary::GetRenderPlaneSizeWithGamma(UObject* WorldContextO
 
 	if (GEngine->StereoRenderingDevice.IsValid() && GEngine->StereoRenderingDevice->IsStereoEnabled() && GEngine->XRSystem.IsValid() && GEngine->XRSystem->GetHMDDevice())
 	{
-		EyeToZedDistance = sl::mr::getEyeToZEDDistance(sl::unreal::ToSlType(GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType()));
+		EyeToZedDistance = sl::mr::getEyeToZEDDistance(sl::unreal::ToSlType(GEngine->XRSystem->GetSystemName()));
 	}
 #if WITH_EDITOR
 	else
@@ -63,24 +67,20 @@ FVector2D USlFunctionLibrary::GetRenderPlaneSizeWithGamma(UObject* WorldContextO
 	{
 		sl::Resolution HMDScreenResolution;
 
-		switch (GEngine->XRSystem->GetHMDDevice()->GetHMDDeviceType())
+		FName Type = GEngine->XRSystem->GetSystemName();
+		if (Type == TEXT("SteamVR"))
 		{
-			case EHMDDeviceType::DT_SteamVR:
-				{
-					HMDScreenResolution.width = 3024;
-					HMDScreenResolution.height = 1680;
-				}
-				break;
-			case EHMDDeviceType::DT_OculusRift:
-				{
-					HMDScreenResolution.width = 2720;
-					HMDScreenResolution.height = 1600;
-				}
-				break;
-			default:
-				{
-					SL_LOG_E(SLFunctionLibrary, "HMD not supported");
-				}
+			HMDScreenResolution.width = 3024;
+			HMDScreenResolution.height = 1680;
+		}
+		else if (Type == TEXT("OculusHMD"))
+		{
+			HMDScreenResolution.width = 2720;
+			HMDScreenResolution.height = 1600;
+		}
+		else
+		{
+			SL_LOG_E(SLFunctionLibrary, "HMD not supported");
 		}
 
 		FMatrix ProjectionMatrix = GEngine->StereoRenderingDevice->GetStereoProjectionMatrix(EStereoscopicPass::eSSP_LEFT_EYE);
@@ -183,4 +183,97 @@ FString USlFunctionLibrary::ErrorCodeToString(ESlErrorCode ErrorCode)
 	}
 
 	return ErrorCodeString;
+}
+
+UTexture2D* Texture32BitFromImage_Internal(const int32 SrcWidth, const int32 SrcHeight, const std::vector<std::vector<float>> &SrcData)
+{
+	UTexture2D *texture = UTexture2D::CreateTransient(SrcWidth, SrcHeight, PF_R32_FLOAT);
+	texture->CompressionSettings = TextureCompressionSettings::TC_HDR;
+	texture->Filter = TextureFilter::TF_Bilinear;
+	texture->SRGB = 0;
+	texture->AddToRoot();
+	texture->UpdateResource();
+	FTexture2DMipMap &mip = texture->PlatformData->Mips[0];
+	float *data = static_cast<float*>(mip.BulkData.Lock(LOCK_READ_WRITE));
+	for (int32 i = 0; i < SrcHeight; i++)
+	{
+		for (int32 j = 0; j < SrcWidth; j++)
+		{
+			data[i*SrcWidth + j] = SrcData.at(i).at(j);
+		}
+	}
+	mip.BulkData.Unlock();
+	texture->UpdateResource();
+	return texture;
+}
+
+UTexture2D* Texture32BitFromImage_Internal(const sl::Mat* mat)
+{
+	UTexture2D *texture = UTexture2D::CreateTransient(mat->getWidth(), mat->getHeight(), PF_R32_FLOAT);
+	texture->CompressionSettings = TextureCompressionSettings::TC_HDR;
+	texture->Filter = TextureFilter::TF_Bilinear;
+	texture->SRGB = 0;
+	texture->AddToRoot();
+	texture->UpdateResource();
+	FTexture2DMipMap &mip = texture->PlatformData->Mips[0];
+	float *data = static_cast<float*>(mip.BulkData.Lock(LOCK_READ_WRITE));
+	for (int32 i = 0; i < mat->getHeight(); i++)
+	{
+		for (int32 j = 0; j < mat->getWidth(); j++)
+		{
+			 mat->getValue<float>(j, i, (data + i*mat->getWidth() + j));
+		}
+	}
+	mip.BulkData.Unlock();
+	texture->UpdateResource();
+	return texture;
+}
+
+std::vector<std::vector<float>> readRows(std::istream& f) {
+	std::string line;
+	std::vector<std::vector<float>> rows;
+	while (std::getline(f, line)) {
+		std::vector<float> row;
+		std::string entry;
+		std::istringstream linestrm(line);
+		while (std::getline(linestrm, entry, '\t')) {
+			row.push_back(std::stof(entry));
+		}
+		rows.push_back(row);
+	}
+	return rows;
+}
+
+UTexture2D* USlFunctionLibrary::GenerateTextureFromTxtFile(const FString filepath)
+{
+	std::vector<std::vector<float>> Mx;
+	std::string filepathSTD = (TCHAR_TO_UTF8(*filepath));
+
+
+	std::ifstream myfile(filepathSTD);
+	if (myfile.is_open())
+	{
+		Mx = readRows(myfile);
+		myfile.close();
+	}
+
+	UTexture2D* texture = Texture32BitFromImage_Internal(Mx.at(0).size(), Mx.size(), Mx);
+	return texture;
+}
+
+UTexture2D* USlFunctionLibrary::GenerateTextureFromSlMat(const sl::Mat* mat)
+{
+	UTexture2D* texture = Texture32BitFromImage_Internal(mat);
+	return texture;
+}
+
+FVector2D USlFunctionLibrary::GetHmdFocale()
+{
+	FMatrix ProjectionMatrix = GEngine->StereoRenderingDevice->GetStereoProjectionMatrix(EStereoscopicPass::eSSP_LEFT_EYE);
+	FIntPoint IdealRenderSize = GEngine->XRSystem->GetHMDDevice()->GetIdealRenderTargetSize();
+	FVector2D focales;
+	focales.X = (IdealRenderSize.X / 4.0f * ProjectionMatrix.M[0][0]);
+	focales.Y = (IdealRenderSize.Y / 2.0f * ProjectionMatrix.M[1][1]);
+	SL_LOG_W(SLFunctionLibrary, "HMD focal compute on viewport %f x %f", (float)IdealRenderSize.X, (float)IdealRenderSize.Y);
+	return focales;
 }

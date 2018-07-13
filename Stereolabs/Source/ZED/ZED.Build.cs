@@ -130,5 +130,6 @@ public class ZED : ModuleRules
 
         // Add the definition for C++
         Definitions.Add(CalibrationFilePathDefinition);
+
     }
 }

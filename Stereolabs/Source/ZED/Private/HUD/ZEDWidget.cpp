@@ -10,17 +10,6 @@ UZEDWidget::UZEDWidget()
 	WidgetComponent->SetupAttachment(this);
 }
 
-void UZEDWidget::BeginDestroy()
-{
-	if (WidgetComponent->IsValidLowLevel())
-	{
-		delete WidgetComponent;
-		WidgetComponent = nullptr;
-	}
-
-	Super::BeginDestroy();
-}
-
 void UZEDWidget::SetVisibility(bool bNewVisibility, bool bPropagateToChildren)
 {
 	Super::SetVisibility(bNewVisibility, bPropagateToChildren);

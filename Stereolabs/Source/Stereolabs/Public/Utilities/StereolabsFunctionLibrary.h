@@ -234,4 +234,14 @@ public:
 	{
 		return FSlTimestamp(A.Timestamp - B.Timestamp);
 	}
+
+	/** Generate texture from txt file */
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "GenerateTextureFromTxtFile", Keywords = "texture"), Category = "Stereolabs")
+	static UTexture2D* GenerateTextureFromTxtFile(const FString filepath);
+
+	static UTexture2D* GenerateTextureFromSlMat(const sl::Mat* mat);
+
+	/** Return HMD HFocal et VFocal lenght*/
+	UFUNCTION(BlueprintPure, meta = (DisplayName = "HmdFocal", Keywords = "Focal"), Category = "Stereolabs")
+	static FVector2D GetHmdFocale();
 };

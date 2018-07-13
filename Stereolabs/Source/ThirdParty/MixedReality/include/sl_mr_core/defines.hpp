@@ -27,6 +27,7 @@ namespace sl {
 		 * \brief Types of HMD supported
 		 */
 		enum class HMD_DEVICE_TYPE : uint8_t {
+			HMD_DEVICE_TYPE_UNKNOWN,
 			HMD_DEVICE_TYPE_OCULUS,
 			HMD_DEVICE_TYPE_HTC
 		};
@@ -91,6 +92,28 @@ namespace sl {
 
 			/** The pose transform */
 			sl::Transform transform;
+
+			/** The pose time stamp */
+			sl::timeStamp timeStamp;
+		};
+
+
+		/**
+		* \struct keyPose
+		* \brief A pair transform/time stamp
+		*/
+		struct SLMRCORE_API keyOrientation {
+			keyOrientation()
+			{}
+
+			keyOrientation(sl::Orientation orientation, sl::timeStamp timeStamp)
+				:
+				orientation(orientation),
+				timeStamp(timeStamp)
+			{}
+
+			/** The pose transform */
+			sl::Orientation orientation;
 
 			/** The pose time stamp */
 			sl::timeStamp timeStamp;

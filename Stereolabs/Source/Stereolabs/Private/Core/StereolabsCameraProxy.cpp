@@ -375,8 +375,11 @@ void USlCameraProxy::Internal_EnableTracking(const FSlTrackingParameters& NewTra
 		SL_CAMERA_PROXY_LOG_E("Can't retrieve IMU Data after enable tracking: \"%s\"", *ErrorString);
 	}
 #endif
-	
-	FRotator IMURotation = sl::unreal::ToUnrealType(IMUData.getRotation()).Rotator();
+	sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+	sl::Rotation Pp = P;
+	Pp.transpose();
+
+	FRotator IMURotation = sl::unreal::ToUnrealType(P * IMUData.pose_data.getRotation() * Pp).Rotator();
 	AsyncTask(ENamedThreads::GameThread, [this, ErrorCode, NewTrackingParameters, IMURotation] ()
 	{
 		if (!GSlCameraProxy)
@@ -446,7 +449,11 @@ void USlCameraProxy::ResetTracking(const FRotator& Rotation, const FVector& Loca
 		}
 #endif
 
-	OnTrackingReset.Broadcast(bTrackingEnabled, sl::unreal::ToUnrealType(ErrorCode), Location, sl::unreal::ToUnrealType(IMUData.getRotation()).Rotator());
+		sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+		sl::Rotation Pp = P;
+		Pp.transpose();
+
+	OnTrackingReset.Broadcast(bTrackingEnabled, sl::unreal::ToUnrealType(ErrorCode), Location, sl::unreal::ToUnrealType(P * IMUData.pose_data.getRotation() * Pp).Rotator());
 }
 
 ESlTrackingState USlCameraProxy::GetPosition(FSlPose& Pose, ESlReferenceFrame ReferenceFrame)
@@ -485,7 +492,12 @@ ESlErrorCode USlCameraProxy::GetIMUData(FSlIMUData& IMUData, ESlTimeReference Ti
 			SL_CAMERA_PROXY_LOG_E("Error while retrieving IMU data: \"%s\"", *ErrorString);
 		}
 #endif
+
+		sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+		sl::Rotation Pp = P;
+		Pp.transpose();
 		IMUData = sl::unreal::ToUnrealType(SlIMUData);
+		IMUData.Transform.SetRotation(sl::unreal::ToUnrealType(P * SlIMUData.pose_data.getRotation() * Pp).ToQuat());
 
 		return sl::unreal::ToUnrealType(ErrorCode);
 	SL_SCOPE_UNLOCK
@@ -552,6 +564,7 @@ bool USlCameraProxy::IsCameraOpened()
 bool USlCameraProxy::IsCameraConnected()
 {
 	return sl::Camera::isZEDconnected() > 0;
+	// return sl::Camera::getDeviceList().size() > 0; // TODO: check stability before using this.
 }
 
 TArray<FSlDeviceProperties> USlCameraProxy::GetCameraList()

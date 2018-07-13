@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Zed")
 	void AddShowOnlyComponent(UPrimitiveComponent* InComponent);
 
+	UFUNCTION(BlueprintCallable, Category = "Zed")
+	void EmptyShowOnlyComponentList();
+
 	/**
 	 * Builds a list of components that are shown based upon gameplay.
 	 * @param ShowOnlyComponentsOut this list will have all components that should be shown added to it
@@ -59,6 +62,14 @@ public:
 	void CloseZedCamera();
 
 public:
+	/*
+	* Make default initialisation (the sequence done in begin play if bUseDefaultBeginPlay=true) : it creates pawn and camera and initialise them.
+	* You can put bUseDefaultBeginPlay=false and call this function later if you need to call other functions before. For instance it can be useful
+	* in a server configuration if you need to exchange info between client and server before spawn of pawn so that you can change pawn class.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Zed")
+	void MakeDefaultInit();
+
 	/*
 	 * Spawn the pawn
 	 * @return The pawn
@@ -337,10 +348,6 @@ private:
 
 	/** Current camera FPS timer */
 	float CurrentCameraFPSTimerGoodFPS;
-
-	/** Class of the Zed camera blueprint */
-	UPROPERTY()
-	UClass* ZedCameraBlueprintClass;
 
 	/** Dynamic instance of the post process fade material */
 	UPROPERTY()

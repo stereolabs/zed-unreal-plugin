@@ -97,52 +97,6 @@ public:
 	void SetCameraSettings(const FSlCameraSettings& NewValue);
 
 	/*
-	 * Initialize cameras and planes
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|Event")
-	void InitializeRendering();
-
-	/*
-	 * Set the post process of the cameras
-	 * @param NewPostProcess The post process to add
-	 * @param NewWeight		 The weight of the post process
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|Rendering")
-	void AddOrUpdatePostProcess(UMaterialInterface* NewPostProcess, float NewWeight);
-
-	/*
-	 * Correct planes drift
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|AntiDrift")
-	void CorrectHMDPlanesDrift();
-
-	/*
-	 * Update planes size based on perception distance
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|AntiDrift")
-	void UpdatePlanesSize();
-	
-	/*
-	 * Update HMD planes rotation
-	 * @param Rotation The new rotation
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|Event")
-	void SetHMDPlanesRotation(const FRotator& Rotation);
-
-	/*
-	 * Set HMD render planes location
-	 * @param NewLocation The new location
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|AntiDrift")
-	void SetHMDPlanesLocation(const FVector& NewLocation);
-	
-	/*
-	 * Hide render planes
-	 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "Zed|Rendering")
-	void DisableRendering();
-
-	/*
 	 * Enable recording using Init and SVO parameters
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Zed|SVO")
@@ -178,6 +132,7 @@ public:
 	 * Initialize tracking data
 	 */
 	void InitHMDTrackingData();
+
 
 	// ------------------------------------------------------------------
 
@@ -217,6 +172,12 @@ private:
 	 * Initialize the drift corrector
 	 */
 	bool InitializeDriftCorrectorConstOffset(const FVector& HMDLocation, const FRotator& HMDRotation);
+	
+	/*
+	 * Adjust the latency correction
+	 */
+	void AdjustLatencyCorrectionOffset(const unsigned long long time);
+ 
 
 	// ------------------------------------------------------------------
 
@@ -286,16 +247,12 @@ public:
 	FSlRenderingParameters RenderingParameters;
 
 	/**  Render distance of the ZED planes */
-	UPROPERTY(BlueprintReadOnly, Category = "Zed|Rendering")
+	UPROPERTY(BlueprintReadWrite, Category = "Zed|Rendering")
 	float CameraRenderPlaneDistance;
 
 	/** Render distance of the HMD planes */
-	UPROPERTY(BlueprintReadOnly,  Category = "Zed|Rendering")
+	UPROPERTY(BlueprintReadWrite,  Category = "Zed|Rendering")
 	float HMDRenderPlaneDistance;
-
-	/** Offset of the HMD camera */
-	UPROPERTY(BlueprintReadOnly, Category = "Zed|Rendering")
-	float HMDCameraOffset;
 
 	/** Rendering mode */
 	UPROPERTY(BlueprintReadOnly, Category = "Zed|Rendering")
@@ -328,6 +285,7 @@ public:
 	/** Dynamic HMD right eye material */
 	UPROPERTY(BlueprintReadWrite, Category = "Zed|Rendering")
 	UMaterialInstanceDynamic* HMDRightEyeMaterialInstanceDynamic;
+
 
 	// ------------------------------------------------------------------
 
@@ -393,4 +351,83 @@ private:
 
 	/** True if initialized */
 	uint8 bInit:1;
+
+
+
+	/************************ Section from old blueprint **********************/
+
+	public:
+
+		/** Root component for intermediate cameras and planes
+		* This component takes the camera-HMD calibration translation 
+		*/
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* InterLeftRoot;
+
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* InterRightRoot;
+
+		/** Root for intermediate planes that takes camera-HMD calibration rotation */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* InterLeftPlaneRotationRoot;
+
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* InterRightPlaneRotationRoot;
+
+		/** Root for intermediate planes that a inter camera forward translation (to be far enough from the camera) */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* InterLeftPlaneTranslationRoot;
+
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* InterRightPlaneTranslationRoot;
+
+		/** Left intermediate camera (virtual equivalent of physical left zed camera) */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneCaptureComponent2D* InterLeftCamera;
+
+		/** Right intermediate camera (virtual equivalent of physical right zed camera)*/
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneCaptureComponent2D* InterRightCamera;
+
+		/** Intermediate left plane on which Zed left image is displayed */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		UStaticMeshComponent* InterLeftPlane;
+
+		/** Intermediate right plane on which Zed right image is displayed */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		UStaticMeshComponent* InterRightPlane;
+
+		/** Main root for final planes */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* FinalRoot;
+
+		/** Root for final planes that takes time-warp rotations */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		USceneComponent* FinalTwRoot;
+
+		/** Left final plane on which left fused (virtual and real) image is displayed */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		UStaticMeshComponent* FinalLeftPlane;
+
+		/** Right final plane on which right fused (virtual and real) image is displayed */
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed|Components")
+		UStaticMeshComponent* FinalRightPlane;
+
+	private:
+
+		void ToggleFinalComponents(bool enable, bool stereo);
+		void ToggleInterComponents(bool enable, bool stereo);
+		void SetupComponents(bool stereo);
+		void SetPlaneSizeWithGamma(UStaticMeshComponent* plane, float planeDistance);
+		void SetPlaneSize(UStaticMeshComponent* plane, float planeDistance);
+		void UpdatePlanesSizeCpp();
+
+		void AddOrUpdatePostProcessCpp(UMaterialInterface* NewPostProcess, float NewWeight);
+
+		void SetHMDPlanesLocationCpp(const FVector& NewLocation);
+		void SetHMDPlanesRotationCpp(const FRotator& Rotation);
+		void CorrectHMDPlanesDriftCpp();
+
+		void DisableRenderingCpp();
+		void InitializeRenderingCpp();
 };
