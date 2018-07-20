@@ -4,4 +4,4 @@ This plugin gives you access to advanced Mixed Reality features to create immers
 
 ## How to use
 
-A modified version of the Unreal Engine is required to use this plugin, you can get all the setup instruction in the dedicated __[documentation](https://www.stereolabs.com/documentation/mixed-reality/unreal/getting-started.md)__.
+A modified version of the Unreal Engine is required to use this plugin, you can get all the setup instruction in the dedicated __[documentation](https://docs.stereolabs.com/mixed-reality/unreal/getting-started/)__.
