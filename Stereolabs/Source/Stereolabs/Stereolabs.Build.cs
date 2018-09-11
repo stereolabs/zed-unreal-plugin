@@ -100,7 +100,7 @@ public class Stereolabs : ModuleRules
             // Check SDK version
             string DefinesHeaderFilePath = Path.Combine(DirPath, "include\\sl_zed\\defines.hpp");
             string Major = "2";
-            string Minor = "5";
+            string Minor = "6";
 
             // Find SDK major and minor version and compare
             foreach (var line in File.ReadLines(DefinesHeaderFilePath))
