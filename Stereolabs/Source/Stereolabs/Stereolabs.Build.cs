@@ -13,8 +13,8 @@ public class Stereolabs : ModuleRules
 
     public Stereolabs(ReadOnlyTargetRules Target) : base(Target)
     {
-        // Note : if using CUFDA 9.0 , change "CUDA_PATH_V9_2" to "CUDA_PATH_V9_0"
-        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V9_2", EnvironmentVariableTarget.Machine);
+        // Note : if using CUFDA 9.0 , change "CUDA_PATH_V10_0" to "CUDA_PATH_V9_0"
+        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
         string ZEDSDKPath  = System.Environment.GetEnvironmentVariable("ZED_SDK_ROOT_DIR", EnvironmentVariableTarget.Machine);
 
         PublicIncludePaths.AddRange(
