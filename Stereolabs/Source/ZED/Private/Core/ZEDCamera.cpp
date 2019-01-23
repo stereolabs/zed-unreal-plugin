@@ -1088,10 +1088,12 @@ void AZEDCamera::SetupComponents(bool stereo)
 	}
 
 	// Set calibration Zed-HMD
-	InterLeftRoot->SetRelativeLocation(AntiDriftParameters.CalibrationTransform.GetLocation());
-	InterLeftPlaneRotationRoot->SetRelativeRotation(AntiDriftParameters.CalibrationTransform.GetRotation());
 	if (stereo)
+	{
+		InterLeftRoot->SetRelativeLocation(AntiDriftParameters.CalibrationTransform.GetLocation());
+		InterLeftPlaneRotationRoot->SetRelativeRotation(AntiDriftParameters.CalibrationTransform.GetRotation());
 		InterRightPlaneRotationRoot->SetRelativeRotation(AntiDriftParameters.CalibrationTransform.GetRotation());
+	}
 
 	// Spectator screen texture
 	if (stereo)

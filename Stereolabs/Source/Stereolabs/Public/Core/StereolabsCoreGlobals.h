@@ -635,6 +635,8 @@ namespace sl
 					return sl::MEASURE::MEASURE_XYZABGR;
 				case ESlMeasure::M_XYZ_ABGR_Right:
 					return sl::MEASURE::MEASURE_XYZABGR_RIGHT;
+				case ESlMeasure::M_Confidence:
+					return sl::MEASURE::MEASURE_CONFIDENCE;
 				default:
 				{
 					ensureMsgf(false, TEXT("Unhandled ESlMeasure entry %u"), (uint32)UnrealType);
