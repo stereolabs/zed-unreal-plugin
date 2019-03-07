@@ -4,6 +4,7 @@
 
 #include "Stereolabs/Public/Core/StereolabsTextureBatch.h"
 #include "Stereolabs/Public/Core/StereolabsTexture.h"
+#include "Engine/DirectionalLight.h"
 
 #include "EnvironmentalLightingManager.generated.h"
 

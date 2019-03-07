@@ -20,7 +20,6 @@ public:
 	 * @param bNewVisibility       The new visibility
 	 * @param bPropagateToChildren True to propagate to children
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Zed")
 	void SetVisibility(bool bNewVisibility, bool bPropagateToChildren=false);
 
 	/*

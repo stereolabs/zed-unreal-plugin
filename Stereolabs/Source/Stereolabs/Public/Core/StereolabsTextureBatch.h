@@ -155,27 +155,23 @@ public:
 	 * @return Single thread : Always return true.
 	 *	       Multi thread  : True if render command enqueued.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Stereolabs|Texture")
 	virtual bool Tick() override;
 
 	/*
 	 * Add a texture
 	 * @param Texture The texture to add
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Stereolabs|Texture")
 	virtual void AddTexture(USlTexture* Texture) override;
 
 	/*
 	 * Remove a texture. Sync with render thread.
 	 * @param Texture The texture to remove
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Stereolabs")
 	virtual void RemoveTexture(USlTexture* Texture) override;
 
 	/*
 	 * Remove all textures. Sync with render thread.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Stereolabs|Texture")
 	virtual void Clear() override;
 
 private:
@@ -183,7 +179,6 @@ private:
 	 * Enable/Disable async retrieve
 	 * @param bEnabled True to enable
 	 */
-	UFUNCTION()
 	virtual void SetAsyncRetrieveEnabled(bool bEnabled) override;
 
 private:
@@ -215,7 +210,6 @@ public:
 	 * Add a texture
 	 * @param Texture The texture to add
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Stereolabs|Texture")
 	virtual void AddTexture(USlTexture* Texture) override;
 };
 
@@ -243,6 +237,5 @@ public:
 	 * Add a texture
 	 * @param Texture The texture to add
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Stereolabs|Texture")
 	virtual void AddTexture(USlTexture* Texture) override;
 };

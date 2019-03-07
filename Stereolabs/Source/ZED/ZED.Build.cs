@@ -23,22 +23,10 @@ public class ZED : ModuleRules
 
     public ZED(ReadOnlyTargetRules Target) : base(Target)
     {
-        PublicIncludePaths.AddRange(
-            new string[] {
-                "ZED/Public"
+        PrivatePCHHeaderFile = "ZED/Public/ZED.h";
 
-				// ... add public include paths required here ...
-			}
-            );
-
-
-        PrivateIncludePaths.AddRange(
-            new string[] {
-				"ZED/Private"
-				
-				// ... add other private include paths required here ...
-			}
-            );
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
         PublicDependencyModuleNames.AddRange(
             new string[]
@@ -129,7 +117,7 @@ public class ZED : ModuleRules
         CalibrationFilePathDefinition = CalibrationFilePathDefinition.Replace("\\", "/");
 
         // Add the definition for C++
-        Definitions.Add(CalibrationFilePathDefinition);
+        PublicDefinitions.Add(CalibrationFilePathDefinition);
 
     }
 }

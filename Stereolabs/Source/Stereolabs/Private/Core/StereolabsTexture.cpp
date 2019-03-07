@@ -12,6 +12,7 @@ typedef FD3D11StateCacheBase FD3D11StateCache;
 #include "D3D11Resources.h"
 
 #define PLUGIN_OPENGL
+#include "OpenGLDrv.h"
 #include "OpenGLWindows.h"
 #include "BoundShaderStateCache.h"
 #include "OpenGLUtil.h"

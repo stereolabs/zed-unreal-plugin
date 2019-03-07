@@ -1,13 +1,17 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
+using System.IO;
+
 namespace UnrealBuildTool.Rules
 {
 	public class SpatialMappingEditor : ModuleRules
 	{
         public SpatialMappingEditor(ReadOnlyTargetRules Target) : base(Target)
         {
-            PrivateIncludePaths.Add("SpatialMappingEditor/Private");
-            PublicIncludePaths.Add("SpatialMappingEditor/Public");
+            PrivatePCHHeaderFile = "SpatialMappingEditor/Public/SpatialMappingEditor.h";
+
+            PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+            PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
             PrivateDependencyModuleNames.AddRange(new string[]
                 {"Slate",

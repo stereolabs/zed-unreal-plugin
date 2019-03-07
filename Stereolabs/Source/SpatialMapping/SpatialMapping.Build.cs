@@ -13,22 +13,10 @@ public class SpatialMapping : ModuleRules
 
     public SpatialMapping(ReadOnlyTargetRules Target) : base(Target)
     {
-        PublicIncludePaths.AddRange(
-            new string[] {
-                "SpatialMapping/Public",
+        PrivatePCHHeaderFile = "SpatialMapping/Public/SpatialMapping.h";
 
-                // ... add public include paths required here ...
-              }
-            );
-
-
-        PrivateIncludePaths.AddRange(
-            new string[] {
-                "SpatialMapping/Private"
-
-				// ... add other private include paths required here ...
-			}
-            );
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
         PublicDependencyModuleNames.AddRange(
             new string[]
