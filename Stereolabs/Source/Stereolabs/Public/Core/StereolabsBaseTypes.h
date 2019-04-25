@@ -1412,7 +1412,6 @@ struct STEREOLABS_API FSlTrackingParameters
 	bool bEnableSpatialMemory;
 
 	/** Enable smooth pose */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Smooth pose"))
 	bool bEnablePoseSmoothing;
 
 	/** Load area file when enabling tracking */
