@@ -18,7 +18,7 @@ struct ZED_API FZEDTrackingData
 	FZEDTrackingData()
 		:
 		TrackingState(ESlTrackingState::TS_TrackingOff),
-		Timestamp((sl::timeStamp)0),
+		Timestamp((sl::Timestamp)0),
 		OffsetZedWorldTransform(FTransform::Identity),
 		ZedWorldTransform(FTransform::Identity),
 		ZedPathTransform(FTransform::Identity),

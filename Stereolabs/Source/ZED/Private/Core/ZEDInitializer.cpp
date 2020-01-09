@@ -89,15 +89,15 @@ bool AZEDInitializer::CanEditChange(const UProperty* InProperty) const
 		return RuntimeParameters.bEnableDepth;
 	}
 
-	if(PropertyName == GET_MEMBER_NAME_CHECKED(FSlTrackingParameters, Location) || 
-	   PropertyName == GET_MEMBER_NAME_CHECKED(FSlTrackingParameters, Rotation))
+	if(PropertyName == GET_MEMBER_NAME_CHECKED(FSlPositionalTrackingParameters, Location) || 
+	   PropertyName == GET_MEMBER_NAME_CHECKED(FSlPositionalTrackingParameters, Rotation))
 	{
 		return !bUseHMDTrackingAsOrigin;
 	}
 
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlTrackingParameters, bEnablePoseSmoothing))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlPositionalTrackingParameters, bEnablePoseSmoothing))
 	{
-		return TrackingParameters.bEnableSpatialMemory;
+		return TrackingParameters.bEnableAreaMemory;
 	}
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlRenderingParameters, ThreadingMode))
@@ -218,14 +218,14 @@ void AZEDInitializer::ResetParameters()
 		InitParameters.VerboseFilePath = DEFAULT_VERBOSE_FILE_PATH;
 	}
 
-	TrackingParameters = FSlTrackingParameters();
+	TrackingParameters = FSlPositionalTrackingParameters();
 	RuntimeParameters = FSlRuntimeParameters();
 	RenderingParameters = FSlRenderingParameters();
 }
 
 void AZEDInitializer::ResetSettings()
 {
-	CameraSettings = FSlCameraSettings();
+	CameraSettings = FSlVideoSettings();
 }
 
 void AZEDInitializer::LoadAntiDriftParameters()

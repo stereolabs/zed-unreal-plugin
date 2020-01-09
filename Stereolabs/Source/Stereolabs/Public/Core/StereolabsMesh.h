@@ -4,7 +4,7 @@
 
 #include "Stereolabs/Public/Core/StereolabsBaseTypes.h"
 
-#include <sl/Mesh.hpp>
+#include <sl/Camera.hpp>
 
 #include "StereolabsMesh.generated.h"
 

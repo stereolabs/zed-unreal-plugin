@@ -15,7 +15,12 @@ public class Stereolabs : ModuleRules
     {
         PrivatePCHHeaderFile = "Stereolabs/Public/Stereolabs.h";
 
-        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
+        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V9_0", EnvironmentVariableTarget.Machine);
+        if (!Directory.Exists(CudaSDKPath))
+            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
+        if (!Directory.Exists(CudaSDKPath))
+            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_2", EnvironmentVariableTarget.Machine);
+
         string ZEDSDKPath  = System.Environment.GetEnvironmentVariable("ZED_SDK_ROOT_DIR", EnvironmentVariableTarget.Machine);
 
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
@@ -85,9 +90,9 @@ public class Stereolabs : ModuleRules
             }
 
             // Check SDK version
-            string DefinesHeaderFilePath = Path.Combine(DirPath, "include\\sl_zed\\defines.hpp");
-            string Major = "2";
-            string Minor = "8";
+            string DefinesHeaderFilePath = Path.Combine(DirPath, "include\\sl\\Camera.hpp");
+            string Major = "3";
+            string Minor = "0";
 
             // Find SDK major and minor version and compare
             foreach (var line in File.ReadLines(DefinesHeaderFilePath))

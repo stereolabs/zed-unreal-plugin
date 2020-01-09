@@ -3,8 +3,6 @@
 #pragma once
 
 #include "AllowWindowsPlatformTypes.h"
-#include <sl/Core.hpp>
-#include <sl/defines.hpp>
 #include <sl/Camera.hpp>
 #include "HideWindowsPlatformTypes.h"
 
@@ -59,11 +57,9 @@ enum class ESlTextureQuality : uint8
 UENUM(BlueprintType, Category = "Stereolabs|Enum")
 enum class ESlSpatialMappingResolution : uint8
 {
-	SMR_Custom				UMETA(DisplayName = "Custom"),
-	SMR_VeryLow				UMETA(DisplayName = "Very Low poly"),
-	SMR_Low					UMETA(DisplayName = "Low poly"),
-	SMR_Medium				UMETA(DisplayName = "High poly"),
-	SMR_High				UMETA(DisplayName = "Very high poly")
+	SMR_Low					UMETA(DisplayName = "Low resolution"),
+	SMR_Medium				UMETA(DisplayName = "Medium resolution"),
+	SMR_High				UMETA(DisplayName = "High resolution")
 };
 
 /*
@@ -73,10 +69,10 @@ enum class ESlSpatialMappingResolution : uint8
 UENUM(BlueprintType, Category = "Stereolabs|Enum")
 enum class ESlSpatialMappingRange : uint8
 {
-	SMR_Custom				UMETA(DisplayName = "Custom"),
-	SMR_Near				UMETA(DisplayName = "Near"),
+	SMR_Short				UMETA(DisplayName = "Short"),
 	SMR_Medium				UMETA(DisplayName = "Medium"),
-	SMR_Far					UMETA(DisplayName = "Far")
+	SMR_Long				UMETA(DisplayName = "Long"),
+	SMR_Auto				UMETA(DisplayName = "Auto")
 };
 
 /*
@@ -148,7 +144,6 @@ enum class ESlDepthMode : uint8
 {
 	DM_None				     UMETA(DisplayName = "None"),
 	DM_Performance			 UMETA(DisplayName = "Performance"),
-	DM_Medium			     UMETA(DisplayName = "Medium"),
 	DM_Quality				 UMETA(DisplayName = "Quality"),
 	DM_Ultra				 UMETA(DisplayName = "Ultra")
 };
@@ -291,22 +286,23 @@ enum class ESlRetrieveResult : uint8
 UENUM(BlueprintType, Category = "Stereolabs|Enum")
 enum class ESlErrorCode : uint8
 {
-	EC_Success					   UMETA(DisplayName = "Success"),
+ 	EC_Success					   UMETA(DisplayName = "Success"),
 	EC_Failure					   UMETA(DisplayName = "Failure"),
 	EC_NoGpuCompatible			   UMETA(DisplayName = "No GPU compatible"),
 	EC_NotEnoughGPUMemory		   UMETA(DisplayName = "Not enough GPU memory"),
 	EC_CameraNotDetected		   UMETA(DisplayName = "Camera not detected"),
-	EC_SensorNotDetected		   UMETA(DisplayName = "Sensor (IMU) not detected"),
+	EC_SensorNotAvailable		   UMETA(DisplayName = "Sensors not available"),
 	EC_InvalidResolution		   UMETA(DisplayName = "Invalid resolution"),
 	EC_LowUSBBandwidth			   UMETA(DisplayName = "Low USB bandwidth"),
 	EC_CalibrationFileNotAvailable UMETA(DisplayName = "Calibration file not available"),
 	EC_InvalidCalibrationFile	   UMETA(DisplayName = "Invalid calibration file"),
 	EC_InvalidSVOFile			   UMETA(DisplayName = "Invalid SVO file"),
 	EC_SVORecordingError		   UMETA(DisplayName = "SVO recording error"),
+	EC_SVOUnsupportedCompression   UMETA(DisplayName = "SVO unsupported compression"),
+	EC_SVOEndOfSVOFile             UMETA(DisplayName = "End of SVO file reached"),
 	EC_InvalidCoordinateSystem	   UMETA(DisplayName = "Invalid coordinate system"),
 	EC_InvalidFirmware			   UMETA(DisplayName = "Invalid firmware"),
 	EC_InvalidFunctionParameters   UMETA(DisplayName = "Invalid function parameters"),
-	EC_NotANewFrame				   UMETA(DisplayName = "Not a new frame"),
 	EC_CUDAError				   UMETA(DisplayName = "CUDA error"),
 	EC_CameraNotInitialized		   UMETA(DisplayName = "Camera not initialized"),
 	EC_NVIDIADriverOutOfDate	   UMETA(DisplayName = "NVIDIA driver out of date"),
@@ -315,8 +311,13 @@ enum class ESlErrorCode : uint8
 	EC_IncompatibleSDKVersion      UMETA(DisplayName = "Incompatible SDK version"),
 	EC_InvalidAreaFile			   UMETA(DisplayName = "Invalid area file"),
 	EC_IncompatibleAreaFile		   UMETA(DisplayName = "Incompatible area file"),
+	EC_CameraFailedToSetup		   UMETA(DisplayName = "Camera failed to setup"),
 	EC_CameraDetectionIssue		   UMETA(DisplayName = "Camera detection issue"),
-	EC_CameraAlreadyInUse		   UMETA(DisplayName = "Camera used by another process"),
+	EC_CameraFailedToStart		   UMETA(DisplayName = "Camera failed to start stream"),
+	EC_NoGpuDetected			   UMETA(DisplayName = "No GPU detected"),
+	EC_NoplaneFound				   UMETA(DisplayName = "No plane(s) found"),
+	EC_ModuleNotCompatible         UMETA(DisplayName = "Module not compatible with camera"),
+	EC_MotionSensorsRequired       UMETA(DisplayName = "Motion sensors required"),
 	// ERROR_CODE_LAST
 	EC_None					  	   UMETA(DisplayName = "No error") 
 };
@@ -329,7 +330,8 @@ UENUM(BlueprintType, Category = "Stereolabs|Enum")
 enum class ESlSVOCompressionMode : uint8
 {
 	SCM_Lossless			UMETA(DisplayName = "Lossless"),
-	SCM_Lossy				UMETA(DisplayName = "Lossy")
+	SCM_H264				UMETA(DisplayName = "H264"),
+	SCM_H265				UMETA(DisplayName = "H265")
 };
 
 /* 
@@ -337,7 +339,7 @@ enum class ESlSVOCompressionMode : uint8
  * see sl::AREA_EXPORT_STATE
  */
 UENUM(BlueprintType, Category = "Stereolabs|Enum")
-enum class ESlSpatialMemoryExportState : uint8
+enum class ESlSpatialMemoryExportingState : uint8
 {
 	SMES_Success			   UMETA(DisplayName = "Success"),
 	SMES_Running			   UMETA(DisplayName = "Running"),
@@ -379,6 +381,7 @@ enum class ESlModel : uint8
 {
 	M_Zed					UMETA(DisplayName = "ZED"),
 	M_ZedM					UMETA(DisplayName = "ZED Mini"),
+	M_Zed2					UMETA(DisplayName = "ZED 2"),
 	M_Unknown				UMETA(DisplayName = "Unknown")
 };
 
@@ -603,7 +606,8 @@ struct STEREOLABS_API FSlCameraInformation
 		:
 		HalfBaseline(0.0f),
 		SerialNumber(0),
-		FirmwareVersion(0),
+		CameraFirmwareVersion(0),
+		SensorsFirmwareVersion(0),
 		CameraModel(ESlModel::M_Unknown)
 	{
 	}
@@ -626,7 +630,11 @@ struct STEREOLABS_API FSlCameraInformation
 
 	/** current firmware version of the camera */
 	UPROPERTY(BlueprintReadOnly)
-	int32 FirmwareVersion;
+	int32 CameraFirmwareVersion;
+
+	/** current firmware version of the camera */
+	UPROPERTY(BlueprintReadOnly)
+	int32 SensorsFirmwareVersion;
 
 	/** camera model (ZED or ZED-M) */
 	UPROPERTY(BlueprintReadOnly)
@@ -879,18 +887,19 @@ struct STEREOLABS_API FSlRecordingState
  * see sl::CameraSettings
  */
 USTRUCT(BlueprintType, Category = "Stereolabs|Struct")
-struct STEREOLABS_API FSlCameraSettings
+struct STEREOLABS_API FSlVideoSettings
 {
 	GENERATED_BODY()
 
 	const TCHAR* Section = TEXT("Camera");
 
-	FSlCameraSettings()
+	FSlVideoSettings()
 		:
 		Brightness(4),
 		Contrast(4),
 		Hue(0),
 		Saturation(4),
+		Sharpness(3),
 		WhiteBalance(4700),
 		Gain(56),
 		Exposure(100),
@@ -929,6 +938,13 @@ struct STEREOLABS_API FSlCameraSettings
 			Saturation,
 			*Path
 			);
+
+		GConfig->GetInt(
+			Section,
+			TEXT("Sharpness"),
+			Sharpness,
+			*Path
+		);
 
 		GConfig->GetInt(
 			Section,
@@ -1003,6 +1019,13 @@ struct STEREOLABS_API FSlCameraSettings
 			Saturation,
 			*Path
 			);
+
+		GConfig->SetInt(
+			Section,
+			TEXT("Sharpness"),
+			Sharpness,
+			*Path
+		);
 
 		GConfig->SetInt(
 			Section,
@@ -1063,6 +1086,10 @@ struct STEREOLABS_API FSlCameraSettings
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", ClampMax = "8"))
 	int32 Saturation;
 
+	/** Saturation, default = 3 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", ClampMax = "8"))
+	int32 Sharpness;
+	
 	/** WhiteBalance */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "2800", ClampMax = "6500"))
 	int32 WhiteBalance;
@@ -1103,7 +1130,7 @@ struct STEREOLABS_API FSlRuntimeParameters
 		:
 		SensingMode(ESlSensingMode::SM_Fill),
 		bEnableDepth(true),
-		bEnablePointCloud(false),
+		ConfidenceThreshold(100),
 		ReferenceFrame(ESlReferenceFrame::RF_World)
 	{
 	}
@@ -1126,10 +1153,10 @@ struct STEREOLABS_API FSlRuntimeParameters
 			*Path
 			);
 
-		GConfig->GetBool(
+		GConfig->GetInt(
 			Section,
-			TEXT("bEnablePointCloud"),
-			bEnablePointCloud,
+			TEXT("ConfidenceThreshold"),
+			ConfidenceThreshold,
 			*Path
 			);
 
@@ -1159,10 +1186,10 @@ struct STEREOLABS_API FSlRuntimeParameters
 			*Path
 			);
 
-		GConfig->SetBool(
+		GConfig->SetInt(
 			Section,
-			TEXT("bEnablePointCloud"),
-			bEnablePointCloud,
+			TEXT("ConfidenceThreshold"),
+			ConfidenceThreshold,
 			*Path
 			);
 
@@ -1184,7 +1211,7 @@ struct STEREOLABS_API FSlRuntimeParameters
 
 	/** Enable point cloud */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bEnablePointCloud;
+	int ConfidenceThreshold;
 
 	/** Reference frame */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -1203,29 +1230,29 @@ struct STEREOLABS_API FSlTimestamp
 
 	FSlTimestamp()
 		:
-		Timestamp((sl::timeStamp)0)
+		timestamp((sl::Timestamp)0)
 	{
 	}
 
-	FSlTimestamp(sl::timeStamp Timestamp)
+	FSlTimestamp(sl::Timestamp tstamp)
 		:
-		Timestamp(Timestamp)
+		timestamp(tstamp)
 	{
 	}
 
-	FSlTimestamp& operator=(sl::timeStamp NewTimestamp)
+	FSlTimestamp& operator=(sl::Timestamp NewTimestamp)
 	{
-		Timestamp = NewTimestamp;
+		timestamp = NewTimestamp;
 		return *this;
 	}
 
 	FString ToString() const
 	{
-		return FString::Printf(TEXT("%llu"), Timestamp);
+		return FString::Printf(TEXT("%llu"), timestamp.data_ns);
 	}
 
 	/** Underlying timestamp */
-	sl::timeStamp Timestamp;
+	sl::Timestamp timestamp;
 };
 
 /*
@@ -1233,18 +1260,18 @@ struct STEREOLABS_API FSlTimestamp
  * see sl::TrackingParameters
  */
 USTRUCT(BlueprintType, Category = "Stereolabs|Struct")
-struct STEREOLABS_API FSlTrackingParameters
+struct STEREOLABS_API FSlPositionalTrackingParameters
 {
 	GENERATED_BODY()
 
 	const TCHAR* Section = TEXT("Tracking");
 
-	FSlTrackingParameters()
+	FSlPositionalTrackingParameters()
 		:
 		Rotation(FRotator::ZeroRotator),
 		Location(FVector::ZeroVector),
 		bEnableTracking(true),
-		bEnableSpatialMemory(false),
+		bEnableAreaMemory(false),
 		bEnablePoseSmoothing(true),
 		bLoadSpatialMemoryFile(false),
 		SpatialMemoryFileLoadingPath(""),
@@ -1278,8 +1305,8 @@ struct STEREOLABS_API FSlTrackingParameters
 
 		GConfig->GetBool(
 			Section,
-			TEXT("bEnableSpatialMemory"),
-			bEnableSpatialMemory,
+			TEXT("bEnableAreaMemory"),
+			bEnableAreaMemory,
 			*Path
 			);
 
@@ -1346,8 +1373,8 @@ struct STEREOLABS_API FSlTrackingParameters
 
 		GConfig->SetBool(
 			Section,
-			TEXT("bEnableSpatialMemory"),
-			bEnableSpatialMemory,
+			TEXT("bEnableAreaMemory"),
+			bEnableAreaMemory,
 			*Path
 			);
 
@@ -1408,8 +1435,8 @@ struct STEREOLABS_API FSlTrackingParameters
 	bool bEnableTracking;
 
 	/** Enable area localization */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Spatial Memory"))
-	bool bEnableSpatialMemory;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Area Memory"))
+	bool bEnableAreaMemory;
 
 	/** Enable smooth pose */
 	bool bEnablePoseSmoothing;
@@ -1448,7 +1475,7 @@ struct STEREOLABS_API FSlPose
 	FSlPose()
 		:
 		Transform(FTransform::Identity),
-		Timestamp((sl::timeStamp)0),
+		Timestamp((sl::Timestamp)0),
 		Confidence(0),
 		bValid(false)
 	{

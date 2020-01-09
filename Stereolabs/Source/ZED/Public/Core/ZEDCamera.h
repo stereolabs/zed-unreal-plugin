@@ -6,7 +6,7 @@
 #include "ZED/Public/Core/ZEDInitializer.h"
 #include "Stereolabs/Public/Core/StereolabsTexture.h"
 #include "Stereolabs/Public/Core/StereolabsTextureBatch.h"
-
+#include "Stereolabs/Public/Core/StereolabsSensorsData.h"
 #include <sl_mr_core/defines.hpp>
 
 #include "ZEDCamera.generated.h"
@@ -94,7 +94,7 @@ public:
 	 * @param NewValue The news camera settings
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Zed|Camera")
-	void SetCameraSettings(const FSlCameraSettings& NewValue);
+	void SetCameraSettings(const FSlVideoSettings& NewValue);
 
 	/*
 	 * Enable recording using Init and SVO parameters
@@ -238,7 +238,7 @@ public:
 
 	/** Camera settings */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Zed")
-	FSlCameraSettings CameraSettings;
+	FSlVideoSettings CameraSettings;
 
 	// ------------------------------------------------------------------
 
@@ -266,7 +266,7 @@ public:
 
 	/** Tracking parameters */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed")
-	FSlTrackingParameters TrackingParameters;
+    FSlPositionalTrackingParameters TrackingParameters;
 
 	// ------------------------------------------------------------------
 
@@ -352,7 +352,8 @@ private:
 	/** True if initialized */
 	uint8 bInit:1;
 
-
+	/** IMU data at Image */
+	USlSensorsData* pSensorsData;
 
 	/************************ Section from old blueprint **********************/
 

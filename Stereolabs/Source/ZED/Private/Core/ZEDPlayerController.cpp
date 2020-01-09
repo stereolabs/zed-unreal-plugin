@@ -762,7 +762,7 @@ void AZEDPlayerController::ResetHMDTrackingOrigin()
 
 void AZEDPlayerController::UpdateNoise()
 {
-	FZEDNoiseFactors NoiseFactors = sl::unreal::ToUnrealType(sl::mr::computeNoiseFactors(GSlCameraProxy->GetCamera().getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_GAIN)));
+	FZEDNoiseFactors NoiseFactors = sl::unreal::ToUnrealType(sl::mr::computeNoiseFactors(GSlCameraProxy->GetCamera().getCameraSettings(sl::VIDEO_SETTINGS::GAIN)));
 
 	ADD_FVECTOR_2D(NoiseFactors.R, bHMDEnabled ? STEREO_NOISE_OFFSET : MONO_NOISE_OFFSET);
 	ADD_FVECTOR_2D(NoiseFactors.G, bHMDEnabled ? STEREO_NOISE_OFFSET : MONO_NOISE_OFFSET);

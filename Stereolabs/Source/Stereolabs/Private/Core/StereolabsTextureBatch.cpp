@@ -10,19 +10,19 @@ DEFINE_LOG_CATEGORY(SlTextureBatch);
 /*
  * Retrieve the free buffer
  */
-#define GET_TB_FREE_BUFFER() (BuffersPool.Num() ? ((BuffersPool[0].bIsFree && BuffersPool[0].Timestamp < CurrentFrameTimestamp.Timestamp) ? &BuffersPool[0] : ((BuffersPool[1].bIsFree && BuffersPool[1].Timestamp < CurrentFrameTimestamp.Timestamp) ?  &BuffersPool[1] : nullptr)) : nullptr);
+#define GET_TB_FREE_BUFFER() (BuffersPool.Num() ? ((BuffersPool[0].bIsFree && BuffersPool[0].Timestamp < CurrentFrameTimestamp.timestamp) ? &BuffersPool[0] : ((BuffersPool[1].bIsFree && BuffersPool[1].Timestamp < CurrentFrameTimestamp.timestamp) ?  &BuffersPool[1] : nullptr)) : nullptr);
 
 /*
  * Init free buffer
  */
 #define INIT_TB_FREE_BUFFER(Buffer)\
-	Buffer->Timestamp = CurrentFrameTimestamp.Timestamp;\
+	Buffer->Timestamp = CurrentFrameTimestamp.timestamp;\
 	Buffer->bIsUpdated = false;\
 
 /*
  * Retrieve the current frame buffer
  */
-#define GET_TB_CURRENT_FRAME_BUFFER() (BuffersPool.Num() ? ((BuffersPool[0].bIsUpdated && CurrentFrameTimestamp.Timestamp == BuffersPool[0].Timestamp) ? &BuffersPool[0] : ((BuffersPool[1].bIsUpdated && CurrentFrameTimestamp.Timestamp == BuffersPool[1].Timestamp) ?  &BuffersPool[1] : nullptr)) : nullptr)
+#define GET_TB_CURRENT_FRAME_BUFFER() (BuffersPool.Num() ? ((BuffersPool[0].bIsUpdated && CurrentFrameTimestamp.timestamp == BuffersPool[0].Timestamp) ? &BuffersPool[0] : ((BuffersPool[1].bIsUpdated && CurrentFrameTimestamp.timestamp == BuffersPool[1].Timestamp) ?  &BuffersPool[1] : nullptr)) : nullptr)
 
 /*
  * Init current frame buffer
@@ -37,7 +37,7 @@ DEFINE_LOG_CATEGORY(SlTextureBatch);
 #define FREE_TB_TEXTURES_POOL()\
 	for (auto TexturesIt = TexturesPool.CreateIterator(); TexturesIt; ++TexturesIt)\
 	{\
-		(*TexturesIt)->Mat.Mat.free(sl::MEM::MEM_CPU | sl::MEM::MEM_GPU);\
+		(*TexturesIt)->Mat.Mat.free(sl::MEM::CPU | sl::MEM::GPU);\
 	}\
 
 FSlTextueBatchMatBuffer::FSlTextueBatchMatBuffer()
@@ -101,7 +101,7 @@ void USlTextureBatch::RetrieveCurrentFrame(const FSlTimestamp& ImageTimestamp)
 
 	SL_SCOPE_LOCK(Lock, RetrieveSection)
 		SL_SCOPE_LOCK(SubLock, BuffersSection)
-			CurrentFrameTimestamp = ImageTimestamp.Timestamp;
+			CurrentFrameTimestamp = ImageTimestamp.timestamp;
 
 			Buffers[0] = GET_TB_FREE_BUFFER();
 

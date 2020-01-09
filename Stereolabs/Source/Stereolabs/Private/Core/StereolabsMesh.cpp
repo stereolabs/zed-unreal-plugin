@@ -77,7 +77,7 @@ bool USlMesh::Filter(const FSlMeshFilterParameters& MeshFilterParameters/* = FSl
 
 bool USlMesh::ApplyTexture(ESlMeshTextureFormat TextureFormat/* = ESlMeshTextureFormat::MTF_RGBA*/, bool bSRGB/* = false*/)
 {
-	bool bIsMeshTextured = Mesh.texture.data.isInit();
+	bool bIsMeshTextured = Mesh.texture.isInit();
 
 	if (!bIsMeshTextured)
 	{
@@ -90,7 +90,7 @@ bool USlMesh::ApplyTexture(ESlMeshTextureFormat TextureFormat/* = ESlMeshTexture
 	}
 
 	// Texture data
-	sl::Mat& MeshTexture = Mesh.texture.data;
+	sl::Mat& MeshTexture = Mesh.texture;
 
 	// Create texture
 	UTexture2D* Texture = UTexture2D::CreateTransient(MeshTexture.getWidth(), MeshTexture.getHeight());
@@ -98,7 +98,7 @@ bool USlMesh::ApplyTexture(ESlMeshTextureFormat TextureFormat/* = ESlMeshTexture
 	// Populate texture
 	FTexture2DMipMap& Mip = Texture->PlatformData->Mips[0];
 	void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);
-	FMemory::Memcpy(Data, MeshTexture.getPtr<sl::float4>(sl::MEM_CPU), MeshTexture.getStepBytes(sl::MEM_CPU) * MeshTexture.getHeight());
+	FMemory::Memcpy(Data, MeshTexture.getPtr<sl::float4>(sl::MEM::CPU), MeshTexture.getStepBytes(sl::MEM::CPU) * MeshTexture.getHeight());
 	Mip.BulkData.Unlock();
 
 	// Set texture settings

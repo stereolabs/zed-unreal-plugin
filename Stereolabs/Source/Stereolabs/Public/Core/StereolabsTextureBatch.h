@@ -17,7 +17,7 @@ struct FSlTextueBatchMatBuffer
 	~FSlTextueBatchMatBuffer();
 
 	/** Timestamp of the buffer */
-	sl::timeStamp Timestamp;
+	sl::Timestamp Timestamp;
 
 	/** True if the buffer is free to use */
 	bool bIsFree;

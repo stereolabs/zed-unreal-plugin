@@ -69,7 +69,7 @@ void ASpatialMappingManager::Tick(float DeltaSeconds)
 								Mesh->MeshData.Texture->UpdateResource();
 
 								// Free memory of the texture
-								Mesh->Mesh.texture.clear();
+								Mesh->Mesh.texture.free();
 
 								switch (SpatialMappingWorker->TexturingMode)
 								{
@@ -117,11 +117,7 @@ void ASpatialMappingManager::PostEditChangeProperty(FPropertyChangedEvent& Prope
 	{
 		SpatialMappingParameters.SetResolution(SpatialMappingParameters.Resolution);
 	}
-
-/*	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlSpatialMappingParameters, MinRange))
-	{
-		SpatialMappingParameters.SetMinRange(SpatialMappingParameters.MinRange);
-	}*/
+	
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlSpatialMappingParameters, MaxRange))
 	{
@@ -134,23 +130,6 @@ void ASpatialMappingManager::PostEditChangeProperty(FPropertyChangedEvent& Prope
 bool ASpatialMappingManager::CanEditChange(const UProperty* InProperty) const
 {
 	FName PropertyName = InProperty->GetFName();
-
-	/*if (GSlCameraProxy && GSlCameraProxy->IsSpatialMappingEnabled())
-	{
-		return false;
-	}*/
-
-	if (/*PropertyName == GET_MEMBER_NAME_CHECKED(FSlSpatialMappingParameters, MinRange) || */
-		PropertyName == GET_MEMBER_NAME_CHECKED(FSlSpatialMappingParameters, MaxRange))
-	{
-		return SpatialMappingParameters.PresetRange == ESlSpatialMappingRange::SMR_Custom;
-	}
-
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlSpatialMappingParameters, Resolution))
-	{
-		return SpatialMappingParameters.PresetResolution == ESlSpatialMappingResolution::SMR_Custom;
-	}
-
 	return Super::CanEditChange(InProperty);
 }
 #endif

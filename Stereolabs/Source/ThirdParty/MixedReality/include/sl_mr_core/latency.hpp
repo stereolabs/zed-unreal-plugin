@@ -3,7 +3,7 @@
 #ifndef __LATENCY_H__
 #define __LATENCY_H__
 
-#include "sl_mr_core\defines.hpp"
+#include "sl_mr_core/defines.hpp"
 
 namespace sl {
 	namespace mr {
@@ -26,7 +26,7 @@ namespace sl {
 		/**
 		* \brief Shutdown latency corrector. No functions can be called after shutdown.
 		*/
-		SLMRCORE_API void latencyCorrectorAdjOffset(sl::timeStamp offset);
+        SLMRCORE_API void latencyCorrectorAdjOffset(sl::Timestamp offset);
 
 		/**
 		 * \brief Delete latency corrector
@@ -40,7 +40,7 @@ namespace sl {
 		 * @param outTransform     Retrieved transform
 		 * @return True if the transform is retrieved
 		 */
-		SLMRCORE_API bool latencyCorrectorGetTransform(sl::timeStamp timeStamp, sl::Transform& outTransform, bool useLatencyTime = true);
+        SLMRCORE_API bool latencyCorrectorGetTransform(sl::Timestamp timeStamp, sl::Transform& outTransform, bool useLatencyTime = true);
 
 		SLMRCORE_API void ComputeOptimSO3(std::vector<sl::mr::keyOrientation> serie1, std::vector<sl::mr::keyOrientation> serie2, sl::mr::keyOrientation& output);
 

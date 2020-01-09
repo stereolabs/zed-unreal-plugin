@@ -140,6 +140,8 @@ AZEDCamera::AZEDCamera()
 	FinalRightPlane->LightingChannels.bChannel0 = false;
 	InterLeftPlane->LightingChannels.bChannel3 = true;
 	InterRightPlane->LightingChannels.bChannel3 = true;
+
+	pSensorsData = NewObject<USlSensorsData>();
 }
 
 void AZEDCamera::BeginPlay()
@@ -236,12 +238,12 @@ bool AZEDCamera::CanEditChange(const UProperty* InProperty) const
 		}
 	}
 
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlCameraSettings, WhiteBalance))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlVideoSettings, WhiteBalance))
 	{
 		return !CameraSettings.bAutoWhiteBalance;
 	}
 
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlCameraSettings, Gain) || PropertyName == GET_MEMBER_NAME_CHECKED(FSlCameraSettings, Exposure))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlVideoSettings, Gain) || PropertyName == GET_MEMBER_NAME_CHECKED(FSlVideoSettings, Exposure))
 	{
 		return !CameraSettings.bAutoGainAndExposure;
 	}
@@ -251,7 +253,7 @@ bool AZEDCamera::CanEditChange(const UProperty* InProperty) const
 		return UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled();
 	}
 
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlTrackingParameters, bEnableTracking))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlPositionalTrackingParameters, bEnableTracking))
 	{
 		return false;
 	}
@@ -272,9 +274,9 @@ bool AZEDCamera::CanEditChange(const UProperty* InProperty) const
 		return !InitParameters.bUseSVO;
 	}
 
-	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlTrackingParameters, bEnablePoseSmoothing))
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlPositionalTrackingParameters, bEnablePoseSmoothing))
 	{
-		return TrackingParameters.bEnableSpatialMemory;
+		return TrackingParameters.bEnableAreaMemory;
 	}
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(AZEDCamera, bUseHMDTrackingAsOrigin))
@@ -299,7 +301,7 @@ void AZEDCamera::Tick(float DeltaSeconds)
 	SL_SCOPE_LOCK(Lock, TrackingUpdateSection)
 		if (GSlCameraProxy->bTrackingEnabled)
 		{
-			bUpdateTracking = TrackingData.Timestamp.Timestamp != CurrentFrameTrackingData.Timestamp.Timestamp;
+			bUpdateTracking = TrackingData.Timestamp.timestamp != CurrentFrameTrackingData.Timestamp.timestamp;
 			if (bUpdateTracking)
 			{
 				TrackingData = CurrentFrameTrackingData;
@@ -325,13 +327,13 @@ void AZEDCamera::Tick(float DeltaSeconds)
 		sl::Transform SlHMDTransform = sl::unreal::ToSlType(FTransform(HMDRotation, HMDLocation));
 
 		// Current timestamp
-		sl::timeStamp CurrentTimestamp = GSlCameraProxy->GetCamera().getTimestamp(sl::TIME_REFERENCE::TIME_REFERENCE_CURRENT);
+		sl::Timestamp CurrentTimestamp = GSlCameraProxy->GetCamera().getTimestamp(sl::TIME_REFERENCE::CURRENT);
 	
 		// Set IMU prior
 		if (GSlCameraProxy->bTrackingEnabled && GSlCameraProxy->GetCameraModel() == ESlModel::M_ZedM)
 		{
 			sl::Transform PastTransform;
-			bool bTransformRetrieved = sl::mr::latencyCorrectorGetTransform(CurrentTimestamp - sl::timeStamp(44000000), PastTransform, false);
+			bool bTransformRetrieved = sl::mr::latencyCorrectorGetTransform(CurrentTimestamp - sl::Timestamp(44000000), PastTransform, false);
 			if (bTransformRetrieved)
 			{
 				GSlCameraProxy->SetIMUPrior(sl::unreal::ToUnrealType(PastTransform));
@@ -348,19 +350,8 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			sl::mr::latencyCorrectorAddKeyPose(sl::mr::keyPose(SlHMDTransform, CurrentTimestamp));
 
 			// Latency corrector
-			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.Timestamp, SlLatencyTransform);
-
-			if (GSlCameraProxy->GetCameraModel() == ESlModel::M_ZedM)
-			{
-				// Update HMD planes rotation
-				//SetHMDPlanesRotation(TrackingData.IMURotator);
-				SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
-			}
-			else
-			{
-				// Update HMD planes rotation
-				SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
-			}
+			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
+			SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
 		}
 
 
@@ -398,7 +389,7 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			// latency transform
 			sl::Transform SlLatencyTransform;
 			// Latency corrector
-			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.Timestamp, SlLatencyTransform);
+			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
 			FTransform latencyTransform = sl::unreal::ToUnrealType(SlLatencyTransform);
 
 			FZEDTrackingData TmpTrackingData;
@@ -419,7 +410,7 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			// latency transform
 			sl::Transform SlLatencyTransform;
 			// Latency corrector
-			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.Timestamp, SlLatencyTransform);
+			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
 			FTransform latencyTransform = sl::unreal::ToUnrealType(SlLatencyTransform);
 
 			FZEDTrackingData TmpTrackingData;
@@ -569,41 +560,40 @@ void AZEDCamera::GrabCallback(ESlErrorCode ErrorCode, const FSlTimestamp& Timest
 		sl::Camera& Zed = GSlCameraProxy->GetCamera();
 
 		sl::Pose Pose;
-		sl::TRACKING_STATE TrackingState = Zed.getPosition(Pose, sl::REFERENCE_FRAME::REFERENCE_FRAME_WORLD);
+		sl::POSITIONAL_TRACKING_STATE TrackingState = Zed.getPosition(Pose, sl::REFERENCE_FRAME::WORLD);
 
 		CurrentFrameTrackingData.TrackingState = sl::unreal::ToUnrealType(TrackingState);
 		CurrentFrameTrackingData.Timestamp = Timestamp;
 
 #if WITH_EDITOR
-		if (TrackingState == sl::TRACKING_STATE::TRACKING_STATE_FPS_TOO_LOW)
+		if (TrackingState == sl::POSITIONAL_TRACKING_STATE::FPS_TOO_LOW)
 		{
 			ZED_CAMERA_LOG_W("FPS too low for good tracking.");
 		}
-		else if (TrackingState == sl::TRACKING_STATE::TRACKING_STATE_SEARCHING)
+		else if (TrackingState == sl::POSITIONAL_TRACKING_STATE::SEARCHING)
 		{
 			ZED_CAMERA_LOG_W("Tracking trying to relocate.");
 		}
 #endif
 
 		// Get the IMU rotation
-		if (TrackingState == sl::TRACKING_STATE::TRACKING_STATE_OK ||
-			TrackingState == sl::TRACKING_STATE::TRACKING_STATE_FPS_TOO_LOW ||
-			TrackingState == sl::TRACKING_STATE::TRACKING_STATE_SEARCHING)
+		if (TrackingState == sl::POSITIONAL_TRACKING_STATE::OK ||
+			TrackingState == sl::POSITIONAL_TRACKING_STATE::FPS_TOO_LOW ||
+			TrackingState == sl::POSITIONAL_TRACKING_STATE::SEARCHING)
 		{
 			CurrentFrameTrackingData.ZedPathTransform = sl::unreal::ToUnrealType(Pose.pose_data);
 		}
 
-		if (GSlCameraProxy->GetCameraModel() == ESlModel::M_ZedM)
+		if (GSlCameraProxy->GetCameraModel() == ESlModel::M_ZedM || GSlCameraProxy->GetCameraModel() == ESlModel::M_Zed2)
 		{
-			sl::IMUData IMUData;
-			sl::ERROR_CODE IMUErrorCode = Zed.getIMUData(IMUData, sl::TIME_REFERENCE::TIME_REFERENCE_IMAGE);
+			sl::ERROR_CODE IMUErrorCode = Zed.getSensorsData(pSensorsData->sdata, sl::TIME_REFERENCE::IMAGE);
 
 			if (IMUErrorCode == sl::ERROR_CODE::SUCCESS)
 			{
 				sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
 				sl::Rotation Pp = P;
 				Pp.transpose();
-				CurrentFrameTrackingData.IMURotator = sl::unreal::ToUnrealType(P * IMUData.pose_data.getRotation() * Pp).Rotator();
+				CurrentFrameTrackingData.IMURotator = sl::unreal::ToUnrealType(P * pSensorsData->sdata.imu.pose.getRotation() * Pp).Rotator();
 			}
 #if WITH_EDITOR
 			else
@@ -672,11 +662,11 @@ void AZEDCamera::SetRuntimeParameters(const FSlRuntimeParameters& NewValue)
 	GSlCameraProxy->SetRuntimeParameters(RuntimeParameters);
 }
 
-void AZEDCamera::SetCameraSettings(const FSlCameraSettings& NewValue)
+void AZEDCamera::SetCameraSettings(const FSlVideoSettings& NewValue)
 {
 	if (NewValue.bDefault)
 	{
-		CameraSettings = FSlCameraSettings();
+		CameraSettings = FSlVideoSettings();
 		CameraSettings.bDefault = true;
 	}
 	else
@@ -882,7 +872,8 @@ void AZEDCamera::CameraClosed()
 	RightEyeNormals = nullptr;
 	delete RightEyeDepth;
 	RightEyeDepth = nullptr;
-
+	if (pSensorsData) delete pSensorsData;
+	pSensorsData = nullptr;
 	bInit = false;
 }
 
@@ -971,7 +962,7 @@ bool AZEDCamera::InitializeDriftCorrectorConstOffset(const FVector& HMDLocation,
 
 void AZEDCamera::AdjustLatencyCorrectionOffset(const unsigned long long time)
 {
-	sl::mr::latencyCorrectorAdjOffset(static_cast<sl::timeStamp>(time));
+	sl::mr::latencyCorrectorAdjOffset(sl::Timestamp(time));
 }
 
 void AZEDCamera::ToggleFinalComponents(bool enable, bool stereo)

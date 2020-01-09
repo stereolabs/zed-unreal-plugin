@@ -5,8 +5,6 @@
 
 #include "sl_mr_core/defines.hpp"
 
-#include <sl/types.hpp>
-#include <sl/core.hpp>
 
 namespace sl {
 	namespace mr {

@@ -183,56 +183,56 @@ public:
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "== (timestamp)", CompactNodeTitle = "==", Keywords = "=="), Category = "Stereolabs")
 	static bool EqualEqual_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return A.Timestamp == B.Timestamp;
+		return A.timestamp.data_ns == B.timestamp.data_ns;
 	}
 
 	/** return true if A is not equal to B (A != B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "!= (timestamp)", CompactNodeTitle = "!=", Keywords = "!="), Category = "Stereolabs")
 	static bool NotEqual_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return A.Timestamp != B.Timestamp;
+		return A.timestamp.data_ns != B.timestamp.data_ns;
 	}
 
 	/** return true if A is less than B (A < B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "< (timestamp)", CompactNodeTitle = "<", Keywords = "<"), Category = "Stereolabs")
 	static bool Less_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return A.Timestamp < B.Timestamp;
+		return A.timestamp.data_ns < B.timestamp.data_ns;
 	}
 
 	/** return true if A is less than or equal to B (A <= B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "<= (timestamp)", CompactNodeTitle = "<=", Keywords = "<="), Category = "Stereolabs")
 	static bool LessEqual_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return A.Timestamp <= B.Timestamp;
+		return A.timestamp.data_ns <= B.timestamp.data_ns;
 	}
 
 	/** return true if A is greater than B (A > B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "> (timestamp)", CompactNodeTitle = ">", Keywords = ">"), Category = "Stereolabs")
 	static bool Greater_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return A.Timestamp > B.Timestamp;
+		return A.timestamp.data_ns > B.timestamp.data_ns;
 	}
 
 	/** return true if A is greater than or equal to B (A >= B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = ">= (timestamp)", CompactNodeTitle = ">=", Keywords = ">="), Category = "Stereolabs")
 	static bool GreaterEqual_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return A.Timestamp >= B.Timestamp;
+		return A.timestamp.data_ns >= B.timestamp.data_ns;
 	}
 
 	/** Addition (A + B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "timestamp + timestamp", CompactNodeTitle = "+", Keywords = "+ add plus"), Category = "Stereolabs")
 	static FSlTimestamp Add_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return FSlTimestamp(A.Timestamp + B.Timestamp);
+		return FSlTimestamp(A.timestamp + B.timestamp);
 	}
 
 	/** Subtraction (A - B) */
 	UFUNCTION(BlueprintPure, meta = (DisplayName = "timestamp - timestamp", CompactNodeTitle = "-", Keywords = "- substract minus"), Category = "Stereolabs")
 	static FSlTimestamp Substract_TimestampTimestamp(const FSlTimestamp& A, const FSlTimestamp& B)
 	{
-		return FSlTimestamp(A.Timestamp - B.Timestamp);
+		return FSlTimestamp(A.timestamp - B.timestamp);
 	}
 
 	/** Generate texture from txt file */

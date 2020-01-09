@@ -47,11 +47,11 @@ bool FSlMeasureRunnable::Init()
 		GrabCallback(ErrorCode);
 	});
 
-	BuffersPool[1].Mats[0].alloc(sl::unreal::ToSlType2(GSlCameraProxy->RetrieveMatSize), sl::MAT_TYPE::MAT_TYPE_32F_C1, sl::MEM::MEM_CPU);
+	BuffersPool[1].Mats[0].alloc(sl::unreal::ToSlType2(GSlCameraProxy->RetrieveMatSize), sl::MAT_TYPE::F32_C1, sl::MEM::CPU);
 	float Nan = NAN;
 	BuffersPool[1].Mats[0].setTo(Nan);
 
-	BuffersPool[1].Mats[1].alloc(sl::unreal::ToSlType2(GSlCameraProxy->RetrieveMatSize), sl::MAT_TYPE::MAT_TYPE_32F_C4, sl::MEM::MEM_CPU);
+	BuffersPool[1].Mats[1].alloc(sl::unreal::ToSlType2(GSlCameraProxy->RetrieveMatSize), sl::MAT_TYPE::F32_C4, sl::MEM::CPU);
 	BuffersPool[1].Mats[1].setTo<sl::float4>(sl::float4(0, 0, 0, 0));
 
 	Buffer = &BuffersPool[1];
@@ -192,11 +192,11 @@ void FSlMeasureRunnable::GrabCallback(ESlErrorCode ErrorCode)
 
 	if (FreeBuffer->bDepthEnabled)
 	{
-		Zed.retrieveMeasure(FreeBuffer->Mats[0], sl::MEASURE::MEASURE_DEPTH, sl::MEM::MEM_GPU, GSlCameraProxy->RetrieveMatSize.X, GSlCameraProxy->RetrieveMatSize.Y);
+		Zed.retrieveMeasure(FreeBuffer->Mats[0], sl::MEASURE::DEPTH, sl::MEM::GPU, sl::Resolution(GSlCameraProxy->RetrieveMatSize.X, GSlCameraProxy->RetrieveMatSize.Y));
 	}
 	if(FreeBuffer->bNormalsEnabled)
 	{
-		Zed.retrieveMeasure(FreeBuffer->Mats[1], sl::MEASURE::MEASURE_NORMALS, sl::MEM::MEM_GPU, GSlCameraProxy->RetrieveMatSize.X, GSlCameraProxy->RetrieveMatSize.Y);
+		Zed.retrieveMeasure(FreeBuffer->Mats[1], sl::MEASURE::NORMALS, sl::MEM::GPU, sl::Resolution(GSlCameraProxy->RetrieveMatSize.X, GSlCameraProxy->RetrieveMatSize.Y));
 	}
 
 	SL_SCOPE_LOCK(Lock, UpdateSection)
@@ -221,7 +221,7 @@ float FSlMeasureRunnable::GetDepth(const FIntPoint& ScreenPosition, const FVecto
 		uint32 Y = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeY, OutputRangeY, ScreenPosition.Y);
 
 		float Depth;
-		DepthMat.getValue(X, Y, &Depth, sl::MEM::MEM_CPU);
+		DepthMat.getValue(X, Y, &Depth, sl::MEM::CPU);
 
 		return Depth;
 	SL_SCOPE_UNLOCK
@@ -242,7 +242,7 @@ TArray<float> FSlMeasureRunnable::GetDepths(const TArray<FIntPoint>& ScreenPosit
 			uint32 X = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeX, OutputRangeX, Iterator->X);
 			uint32 Y = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeY, OutputRangeY, Iterator->Y);
 
-			DepthMat.getValue(X, Y, &Depth, sl::MEM::MEM_CPU);
+			DepthMat.getValue(X, Y, &Depth, sl::MEM::CPU);
 
 			Depths.Add(Depth);
 		}
@@ -260,7 +260,7 @@ FVector FSlMeasureRunnable::GetNormal(const FIntPoint& ScreenPosition, const FVe
 		uint32 Y = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeY, OutputRangeY, ScreenPosition.Y);
 
 		sl::float4 Normal;
-		NormalsMat.getValue(X, Y, &Normal, sl::MEM::MEM_CPU);
+		NormalsMat.getValue(X, Y, &Normal, sl::MEM::CPU);
 
 		return FVector(Normal.x, Normal.y, Normal.z);
 	SL_SCOPE_UNLOCK
@@ -281,7 +281,7 @@ TArray<FVector> FSlMeasureRunnable::GetNormals(const TArray<FIntPoint>& ScreenPo
 			uint32 X = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeX, OutputRangeX, Iterator->X);
 			uint32 Y = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeY, OutputRangeY, Iterator->Y);
 
-			NormalsMat.getValue(X, Y, &Normal, sl::MEM::MEM_CPU);
+			NormalsMat.getValue(X, Y, &Normal, sl::MEM::CPU);
 
 			Normals.Insert(FVector(Normal.x, Normal.y, Normal.z), Iterator.GetIndex());
 		}
@@ -300,10 +300,10 @@ FVector4 FSlMeasureRunnable::GetDepthAndNormal(const FIntPoint& ScreenPosition, 
 		uint32 Y = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeY, OutputRangeY, ScreenPosition.Y);
 
 		sl::float4 Normal;
-		NormalsMat.getValue(X, Y, &Normal, sl::MEM::MEM_CPU);
+		NormalsMat.getValue(X, Y, &Normal, sl::MEM::CPU);
 
 		float Depth;
-		DepthMat.getValue(X, Y, &Depth, sl::MEM::MEM_CPU);
+		DepthMat.getValue(X, Y, &Depth, sl::MEM::CPU);
 
 		return FVector4(Normal.x, Normal.y, Normal.z, Depth);
 	SL_SCOPE_UNLOCK
@@ -326,8 +326,8 @@ TArray<FVector4> FSlMeasureRunnable::GetDepthsAndNormals(const TArray<FIntPoint>
 			uint32 X = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeX, OutputRangeX, Iterator->X);
 			uint32 Y = (uint32)FMath::GetMappedRangeValueUnclamped(InputRangeY, OutputRangeY, Iterator->Y);
 
-			NormalsMat.getValue(X, Y, &Normal, sl::MEM::MEM_CPU);
-			DepthMat.getValue(X, Y, &Depth, sl::MEM::MEM_CPU);
+			NormalsMat.getValue(X, Y, &Normal, sl::MEM::CPU);
+			DepthMat.getValue(X, Y, &Depth, sl::MEM::CPU);
 
 			DepthsAndNormals.Insert(FVector4(Normal.x, Normal.y, Normal.z, Depth), Iterator.GetIndex());
 		}

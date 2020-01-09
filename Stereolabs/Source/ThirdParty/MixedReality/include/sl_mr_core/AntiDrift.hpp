@@ -1,7 +1,7 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
-#ifndef __ANTIDRIFT_H__
-#define __ANTIDRIFT_H__
+#ifndef __MR_CORE_ANTIDRIFT_H__
+#define __MR_CORE_ANTIDRIFT_H__
 
 #include "sl_mr_core/defines.hpp"
 
