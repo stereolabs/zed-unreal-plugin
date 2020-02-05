@@ -18,9 +18,6 @@ SL_HANDLE_DEFINE(MRCore)
 void FStereolabs::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-
-	SL_IMPORT(Core,    "sl_core64.dll");
-	SL_IMPORT(Inputs,  "sl_inputs64.dll");
 	SL_IMPORT(Zed,     "sl_zed64.dll");
 	SL_IMPORT(Nvd3dumx, "nvd3dumx.dll");
 

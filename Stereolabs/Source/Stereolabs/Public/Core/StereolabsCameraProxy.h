@@ -611,6 +611,16 @@ public:
 	void Grab();
 
 	/*
+	* Easy access to sl::Pose
+	*/
+	sl::POSITIONAL_TRACKING_STATE GetCameraPosition(sl::Pose& pose, sl::REFERENCE_FRAME rframe);
+
+	/*
+	* Easy access to IMU pose
+	*/
+	sl::ERROR_CODE GetCameraIMURotationAtImage(sl::Rotation& pose);
+
+	/*
 	 * Add a function to the grab delegate.
 	 * Be sure to call RemoveFromGrabDelegate.
 	 *
@@ -802,7 +812,6 @@ private:
 	/** A worker to thread CPU depth get calls */
 	class FSlMeasureRunnable* MeasuresWorker;
 
-	class USlSensorsData* CurrentSensorsData;// = NewObject<USlSensorsData>();
 private:
 	/** True if camera opened by OpenCamera */
 	bool bCameraOpened;
@@ -826,4 +835,13 @@ private:
 private:
 	/** Underlying Zed camera */
 	sl::Camera Zed;
+
+	/** Underlying sensors data (imu, ...)
+	* One for current ts, one for image ts.
+	*/
+	sl::SensorsData CurrentSensorsData;
+	sl::SensorsData ImageRefSensorsData;
+	sl::ERROR_CODE IMUErrorCode;
+
+
 };

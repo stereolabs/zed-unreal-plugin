@@ -141,7 +141,7 @@ AZEDCamera::AZEDCamera()
 	InterLeftPlane->LightingChannels.bChannel3 = true;
 	InterRightPlane->LightingChannels.bChannel3 = true;
 
-	pSensorsData = NewObject<USlSensorsData>();
+	
 }
 
 void AZEDCamera::BeginPlay()
@@ -149,7 +149,6 @@ void AZEDCamera::BeginPlay()
 	Super::BeginPlay();
 
 	GSlCameraProxy->OnCameraClosed.AddDynamic(this, &AZEDCamera::CameraClosed);
-
 	CameraRenderPlaneDistance = GNearClippingPlane +0.001;
 }
 
@@ -160,7 +159,6 @@ void AZEDCamera::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (GSlCameraProxy)
 	{
 		GSlCameraProxy->OnCameraClosed.RemoveDynamic(this, &AZEDCamera::CameraClosed);
-
 		GSlCameraProxy->RemoveFromGrabDelegate(GrabDelegateHandle);
 	}
 
@@ -557,11 +555,8 @@ void AZEDCamera::GrabCallback(ESlErrorCode ErrorCode, const FSlTimestamp& Timest
 	Batch->RetrieveCurrentFrame(Timestamp);
 
 	SL_SCOPE_LOCK(Lock, TrackingUpdateSection)
-		sl::Camera& Zed = GSlCameraProxy->GetCamera();
-
 		sl::Pose Pose;
-		sl::POSITIONAL_TRACKING_STATE TrackingState = Zed.getPosition(Pose, sl::REFERENCE_FRAME::WORLD);
-
+		sl::POSITIONAL_TRACKING_STATE TrackingState = GSlCameraProxy->GetCameraPosition(Pose, sl::REFERENCE_FRAME::WORLD);
 		CurrentFrameTrackingData.TrackingState = sl::unreal::ToUnrealType(TrackingState);
 		CurrentFrameTrackingData.Timestamp = Timestamp;
 
@@ -586,22 +581,20 @@ void AZEDCamera::GrabCallback(ESlErrorCode ErrorCode, const FSlTimestamp& Timest
 
 		if (GSlCameraProxy->GetCameraModel() == ESlModel::M_ZedM || GSlCameraProxy->GetCameraModel() == ESlModel::M_Zed2)
 		{
-			sl::ERROR_CODE IMUErrorCode = Zed.getSensorsData(pSensorsData->sdata, sl::TIME_REFERENCE::IMAGE);
-
+			sl::Rotation imuPose;
+			sl::ERROR_CODE IMUErrorCode  = GSlCameraProxy->GetCameraIMURotationAtImage(imuPose);
 			if (IMUErrorCode == sl::ERROR_CODE::SUCCESS)
 			{
-				sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
-				sl::Rotation Pp = P;
-				Pp.transpose();
-				CurrentFrameTrackingData.IMURotator = sl::unreal::ToUnrealType(P * pSensorsData->sdata.imu.pose.getRotation() * Pp).Rotator();
+				CurrentFrameTrackingData.IMURotator = sl::unreal::ToUnrealType(imuPose).Rotator();
 			}
-#if WITH_EDITOR
+		#if WITH_EDITOR
 			else
 			{
 				FString ErrorString(sl::toString(IMUErrorCode).c_str());
 				ZED_CAMERA_LOG_E("Error while getting IMU data : \"%s\"", *ErrorString);
 			}
-#endif
+		#endif
+
 		}
 	SL_SCOPE_UNLOCK
 }
@@ -855,11 +848,8 @@ void AZEDCamera::CameraClosed()
 	}
 
 	GSlCameraProxy->RemoveFromGrabDelegate(GrabDelegateHandle);
-
 	UHeadMountedDisplayFunctionLibrary::SetSpectatorScreenMode(ESpectatorScreenMode::SingleEyeCroppedToFill);
-
 	Batch->Clear();
-
 	delete LeftEyeColor;
 	LeftEyeColor = nullptr;
 	delete LeftEyeNormals;
@@ -872,8 +862,6 @@ void AZEDCamera::CameraClosed()
 	RightEyeNormals = nullptr;
 	delete RightEyeDepth;
 	RightEyeDepth = nullptr;
-	if (pSensorsData) delete pSensorsData;
-	pSensorsData = nullptr;
 	bInit = false;
 }
 

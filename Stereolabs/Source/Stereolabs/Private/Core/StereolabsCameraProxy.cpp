@@ -6,7 +6,6 @@
 #include "Stereolabs/Private/Threading/StereolabsGrabRunnable.h"
 #include "Stereolabs/Private/Threading/StereolabsMeasureRunnable.h"
 #include "Stereolabs/Public/Core/StereolabsTexture.h"
-#include "Stereolabs/Public/Core/StereolabsSensorsData.h"
 #include "WidgetLayoutLibrary.h"
 
 DECLARE_CYCLE_STAT_EXTERN(TEXT("Grab"), STAT_Grab, STATGROUP_ZED, STEREOLABS_API);
@@ -158,13 +157,8 @@ void USlCameraProxy::BeginDestroy()
 		delete MeasuresWorker;
 		MeasuresWorker = nullptr;
 	}
-	if (CurrentSensorsData) {
-		delete CurrentSensorsData;
-		CurrentSensorsData = nullptr;
-	}
 
-	CloseCamera();
-
+	CloseCamera();  
 	Super::BeginDestroy();
 }
 
@@ -188,7 +182,7 @@ void USlCameraProxy::OpenCamera(const FSlInitParameters& InitParameters)
 
 		return;
 	}
-	CurrentSensorsData = NewObject<USlSensorsData>();
+
 	OpenCameraAsyncTask = new FAsyncTask<FOpenCameraAsyncTask>(InitParameters);
 	OpenCameraAsyncTask->StartBackgroundTask();
 }
@@ -328,7 +322,7 @@ void USlCameraProxy::CloseCamera()
 		// Broadcast
 		OnCameraClosed.Broadcast();
 	}
-
+	 
 	Zed.close();
 }
 
@@ -361,7 +355,7 @@ void USlCameraProxy::Internal_EnableTracking(const FSlPositionalTrackingParamete
 	SL_SCOPE_LOCK(Lock, GrabSection)
 		ErrorCode = Zed.enablePositionalTracking(sl::unreal::ToSlType(NewTrackingParameters));
 
-		IMUDataErrorCode = Zed.getSensorsData(CurrentSensorsData->sdata, sl::TIME_REFERENCE::CURRENT);
+		IMUDataErrorCode = Zed.getSensorsData(CurrentSensorsData, sl::TIME_REFERENCE::CURRENT);
 	SL_SCOPE_UNLOCK
 
 #if WITH_EDITOR
@@ -378,12 +372,12 @@ void USlCameraProxy::Internal_EnableTracking(const FSlPositionalTrackingParamete
 	}
 #endif
 	sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
-	sl::Rotation imu_pose = CurrentSensorsData->sdata.imu.pose.getRotation();
+	sl::Rotation imu_pose = CurrentSensorsData.imu.pose.getRotation();
 	imu_pose.setRotationVector(sl::float3(0,0,0));
 	sl::Rotation Pp = P;
 	Pp.transpose();
 	FRotator IMURotation = sl::unreal::ToUnrealType(P * imu_pose * Pp).Rotator();
-	//delete IMUData;
+
 	AsyncTask(ENamedThreads::GameThread, [this, ErrorCode, NewTrackingParameters, IMURotation] ()
 	{
 		if (!GSlCameraProxy)
@@ -431,7 +425,7 @@ void USlCameraProxy::ResetTracking(const FRotator& Rotation, const FVector& Loca
 	sl::ERROR_CODE IMUDataErrorCode;
 	SL_SCOPE_LOCK(Lock, GrabSection)
 	ErrorCode = Zed.resetPositionalTracking(sl::unreal::ToSlType(FTransform(Rotation, Location)));	
-	IMUDataErrorCode = Zed.getSensorsData(CurrentSensorsData->sdata, sl::TIME_REFERENCE::CURRENT);
+	IMUDataErrorCode = Zed.getSensorsData(CurrentSensorsData, sl::TIME_REFERENCE::CURRENT);
 	SL_SCOPE_UNLOCK
 
 	bTrackingEnabled = (ErrorCode == sl::ERROR_CODE::SUCCESS);
@@ -453,7 +447,7 @@ void USlCameraProxy::ResetTracking(const FRotator& Rotation, const FVector& Loca
 		sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
 		sl::Rotation Pp = P;
 		Pp.transpose();
-		sl::Rotation rot_imu = CurrentSensorsData->sdata.imu.pose.getRotation();
+		sl::Rotation rot_imu = CurrentSensorsData.imu.pose.getRotation();
 
 	OnTrackingReset.Broadcast(bTrackingEnabled, sl::unreal::ToUnrealType(ErrorCode), Location, sl::unreal::ToUnrealType(P * rot_imu * Pp).Rotator());
 }
@@ -483,24 +477,25 @@ ESlTrackingState USlCameraProxy::GetPosition(FSlPose& Pose, ESlReferenceFrame Re
 ESlErrorCode USlCameraProxy::GetIMUData(FSlIMUData& IMUData, ESlTimeReference TimeReference)
 {
 	SL_SCOPE_LOCK(Lock, GrabSection)
-		sl::ERROR_CODE ErrorCode = Zed.getSensorsData(CurrentSensorsData->sdata, sl::unreal::ToSlType(TimeReference));
+			sl::ERROR_CODE ErrorCode = Zed.getSensorsData(CurrentSensorsData, sl::unreal::ToSlType(TimeReference));
 
 #if WITH_EDITOR
-		if (ErrorCode != sl::ERROR_CODE::SUCCESS)
-		{
-			FString ErrorString(sl::toString(ErrorCode).c_str());
-			SL_CAMERA_PROXY_LOG_E("Error while retrieving IMU data: \"%s\"", *ErrorString);
-		}
+			if (ErrorCode != sl::ERROR_CODE::SUCCESS)
+			{
+				FString ErrorString(sl::toString(ErrorCode).c_str());
+				SL_CAMERA_PROXY_LOG_E("Error while retrieving IMU data: \"%s\"", *ErrorString);
+			}
 #endif
 
-		sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
-		sl::Rotation Pp = P;
-		Pp.transpose();
-		IMUData = sl::unreal::ToUnrealType(CurrentSensorsData->sdata);
-		sl::Rotation rot_imu = CurrentSensorsData->sdata.imu.pose.getRotation();
-		IMUData.Transform.SetRotation(sl::unreal::ToUnrealType(P * rot_imu * Pp).ToQuat());
+			sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+			sl::Rotation Pp = P;
+			Pp.transpose();
+			IMUData = sl::unreal::ToUnrealType(CurrentSensorsData);
+			sl::Rotation rot_imu = CurrentSensorsData.imu.pose.getRotation();
+			IMUData.Transform.SetRotation(sl::unreal::ToUnrealType(P * rot_imu * Pp).ToQuat());
 
-		return sl::unreal::ToUnrealType(ErrorCode);
+			return sl::unreal::ToUnrealType(ErrorCode);
+
 	SL_SCOPE_UNLOCK
 }
 
@@ -590,6 +585,33 @@ sl::Camera& USlCameraProxy::GetCamera()
 {
 	return Zed;
 }
+ 
+sl::POSITIONAL_TRACKING_STATE USlCameraProxy::GetCameraPosition(sl::Pose& pose, sl::REFERENCE_FRAME rframe)
+{
+	if (Zed.isOpened())
+		return Zed.getPosition(pose, rframe);
+	else
+		return sl::POSITIONAL_TRACKING_STATE::OFF;
+}
+ 
+sl::ERROR_CODE USlCameraProxy::GetCameraIMURotationAtImage(sl::Rotation& pose)
+{
+	if (Zed.isOpened()) {
+		 
+		if (IMUErrorCode == sl::ERROR_CODE::SUCCESS)
+		{
+			sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+			sl::Rotation Pp = P;
+			Pp.transpose();
+			pose = P * ImageRefSensorsData.imu.pose.getRotation() * Pp;
+		}
+
+		return IMUErrorCode;
+	}
+ 	else
+		return sl::ERROR_CODE::FAILURE;
+}
+
 
 void USlCameraProxy::Grab()
 {
@@ -618,6 +640,7 @@ void USlCameraProxy::Grab()
 
 	SL_SCOPE_LOCK(Lock, GrabSection)
 		ErrorCode = Zed.grab(RuntimeParameters);
+	    IMUErrorCode = Zed.getSensorsData(ImageRefSensorsData, sl::TIME_REFERENCE::IMAGE);
 	SL_SCOPE_UNLOCK
 
 	if (ErrorCode == sl::ERROR_CODE::SUCCESS)

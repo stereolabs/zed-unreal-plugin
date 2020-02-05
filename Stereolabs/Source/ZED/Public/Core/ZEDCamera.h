@@ -6,7 +6,6 @@
 #include "ZED/Public/Core/ZEDInitializer.h"
 #include "Stereolabs/Public/Core/StereolabsTexture.h"
 #include "Stereolabs/Public/Core/StereolabsTextureBatch.h"
-#include "Stereolabs/Public/Core/StereolabsSensorsData.h"
 #include <sl_mr_core/defines.hpp>
 
 #include "ZEDCamera.generated.h"
@@ -352,8 +351,6 @@ private:
 	/** True if initialized */
 	uint8 bInit:1;
 
-	/** IMU data at Image */
-	USlSensorsData* pSensorsData;
 
 	/************************ Section from old blueprint **********************/
 
