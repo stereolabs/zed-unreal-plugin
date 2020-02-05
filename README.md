@@ -6,4 +6,4 @@ This plugin gives you access to advanced Mixed Reality features to create immers
 
 A modified version of the Unreal Engine is required to use this plugin, you can get all the setup instruction in the dedicated __[documentation](https://docs.stereolabs.com/mixed-reality/unreal/getting-started/)__.
 
-*Note:* This branch is compatible with our custom distribution of Unreal Engine 4.21 ([download here](https://github.com/Stereolabs-Unreal/UnrealEngine/tree/4.21-zed)) with ZED SDK v2.8 installed. See other branches if using another Unreal or ZED SDK version. Plugins are not backwards-compatible.
+*Note:* This branch is compatible with our custom distribution of Unreal Engine 4.21 ([download here](https://github.com/Stereolabs-Unreal/UnrealEngine/tree/4.21-zed)) with ZED SDK v3.0 installed. See other branches if using another Unreal or ZED SDK version. Plugins are not backwards-compatible.
