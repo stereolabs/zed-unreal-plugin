@@ -80,7 +80,7 @@ public:
 
 	/** Tracking parameters */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed")
-	FSlTrackingParameters TrackingParameters;
+	FSlPositionalTrackingParameters TrackingParameters;
 
 	/** Init parameters */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed")
@@ -96,7 +96,7 @@ public:
 
 	/** Camera settings */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed")
-	FSlCameraSettings CameraSettings;
+	FSlVideoSettings CameraSettings;
 
 	/** Actors that will be attached to the pawn at startup. Actor's Transform will be local, and body weld. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Zed")

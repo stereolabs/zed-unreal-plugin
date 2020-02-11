@@ -762,7 +762,7 @@ void AZEDPlayerController::ResetHMDTrackingOrigin()
 
 void AZEDPlayerController::UpdateNoise()
 {
-	FZEDNoiseFactors NoiseFactors = sl::unreal::ToUnrealType(sl::mr::computeNoiseFactors(GSlCameraProxy->GetCamera().getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_GAIN)));
+	FZEDNoiseFactors NoiseFactors = sl::unreal::ToUnrealType(sl::mr::computeNoiseFactors(GSlCameraProxy->GetCamera().getCameraSettings(sl::VIDEO_SETTINGS::GAIN)));
 
 	ADD_FVECTOR_2D(NoiseFactors.R, bHMDEnabled ? STEREO_NOISE_OFFSET : MONO_NOISE_OFFSET);
 	ADD_FVECTOR_2D(NoiseFactors.G, bHMDEnabled ? STEREO_NOISE_OFFSET : MONO_NOISE_OFFSET);
@@ -834,10 +834,22 @@ void AZEDPlayerController::Internal_ZedCameraDisconnected()
 	ShowOnlyPrimitiveComponents.Add(ZedPawn->ZedErrorWidget->WidgetComponent);
 
 	FadeOut();
+
+	// Apply last known transform to the initializer in case of a reconnection
+	TArray<AActor*> ZedInitializer;
+	UGameplayStatics::GetAllActorsOfClass(this, AZEDInitializer::StaticClass(), ZedInitializer);
+	AZEDInitializer* Initializer = static_cast<AZEDInitializer*>(ZedInitializer[0]);
+	Initializer->LoadParametersAndSettings();
+	Initializer->TrackingParameters.Location = ZedCamera->TrackingData.ZedWorldTransform.GetLocation();
+	Initializer->TrackingParameters.Rotation = ZedCamera->TrackingData.ZedWorldTransform.GetRotation().Rotator();
+
+	// Search for reconnection
+	OpenZedCamera();
 }
 
 void AZEDPlayerController::ZedCameraDisconnected()
 {
+	SL_LOG_W(ZEDPlayerController, "ZedCameraDisconnected !");
 	GetWorldTimerManager().ClearTimer(DisableFadePostProcessTimerHandle);
 	ZedPawn->Camera->AddOrUpdateBlendable(PostProcessFadeMaterialInstanceDynamic, 1.0f);
 

@@ -226,11 +226,11 @@ bool FSpatialMappingRunnable::SaveMesh()
 		Format = MeshFileFormat;
 	SL_SCOPE_UNLOCK
 
-	Mesh->Mesh.applyTexture(sl::MESH_TEXTURE_FORMAT::MESH_TEXTURE_RGBA);
+	Mesh->Mesh.applyTexture(sl::MESH_TEXTURE_FORMAT::RGBA);
 
 	bool bSaved = Mesh->Save(*Path, TArray<int32>(), Format);
 
-	Mesh->Mesh.texture.clear();
+	Mesh->Mesh.texture.free();
 
 	SL_SCOPE_LOCK(Lock, SpatialMappingManager->MeshDataUpdateSection)
 		SpatialMappingManager->Step = Step;

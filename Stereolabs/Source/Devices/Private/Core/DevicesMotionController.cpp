@@ -7,12 +7,25 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "ZED/Public/Core/ZEDInitializer.h"
 
+#include "IXRTrackingSystem.h"
+
 #include <sl_mr_core/latency.hpp>
 
 ADevicesMotionController::ADevicesMotionController()
-	:
-	LatencyTime(25)
 {
+	LatencyTime = 25;
+	if (GEngine != nullptr)
+	{
+		if (GEngine->XRSystem.IsValid())
+		{
+			FName deviceType = GEngine->XRSystem->GetSystemName();
+			if (deviceType == TEXT("OculusHMD"))
+				LatencyTime = 55;
+			else if (deviceType == TEXT("SteamVR"))
+				LatencyTime = 25;
+		}
+	}
+
 	PrimaryActorTick.bCanEverTick = true;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>("RootComponent");
@@ -113,7 +126,14 @@ int ADevicesMotionController::GetModifiedLatencyTime()
 
 FTransform ADevicesMotionController::GetDelayedTransform()
 {
-	return TransformBuffer[0];
+	if (TransformBuffer.Num() > 0)
+	{
+		return TransformBuffer[0];
+	}
+	else
+	{
+		return FTransform();
+	}
 }
 
 void ADevicesMotionController::UpdateTransformBuffer()
@@ -130,11 +150,15 @@ void ADevicesMotionController::UpdateTransformBuffer()
 
 bool ADevicesMotionController::GetTransform(FTransform& Transform)
 {
+	if (TransformBuffer.Num() < LatencyTime)
+	{
+		return false;
+	}
+
 	FZEDTrackingData TrackingData = UZEDFunctionLibrary::GetTrackingData();
 	FTransform DelayedTransform = GetDelayedTransform();
 	sl::Transform SlLatencyTransform;
-
-	bool bTransform = sl::mr::latencyCorrectorGetTransform(GSlCameraProxy->GetCamera().getTimestamp(sl::TIME_REFERENCE::TIME_REFERENCE_CURRENT) - sl::timeStamp(LatencyTime * 1000000), SlLatencyTransform, false);
+	bool bTransform = sl::mr::latencyCorrectorGetTransform(GSlCameraProxy->GetCamera().getTimestamp(sl::TIME_REFERENCE::CURRENT) - sl::Timestamp(LatencyTime * 1000000), SlLatencyTransform, false);
 	if (!bTransform)
 	{
 		return false;

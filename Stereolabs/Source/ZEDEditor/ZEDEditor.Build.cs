@@ -1,13 +1,17 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
+using System.IO;
+
 namespace UnrealBuildTool.Rules
 {
 	public class ZEDEditor : ModuleRules
 	{
         public ZEDEditor(ReadOnlyTargetRules Target) : base(Target)
         {
-            PrivateIncludePaths.Add("ZEDEditor/Private");
-            PublicIncludePaths.Add("ZEDEditor/Public");
+            PrivatePCHHeaderFile = "ZEDEditor/Public/ZEDEditor.h";
+
+            PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+            PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
             PrivateDependencyModuleNames.AddRange(new string[]
                 {"Slate",

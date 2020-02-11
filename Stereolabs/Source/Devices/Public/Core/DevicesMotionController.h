@@ -65,7 +65,7 @@ private:
 	int32 LatencyTime;
 
 	/** Buffer containing previous controller transforms (one transform each frame) */
-	TArray<FTransform, TFixedAllocator<25>> TransformBuffer;
+	TArray<FTransform, TFixedAllocator<70>> TransformBuffer;
 
 	/** Update transform timer handle */
 	FTimerHandle TimerHandle;

@@ -12,6 +12,7 @@ typedef FD3D11StateCacheBase FD3D11StateCache;
 #include "D3D11Resources.h"
 
 #define PLUGIN_OPENGL
+#include "OpenGLDrv.h"
 #include "OpenGLWindows.h"
 #include "BoundShaderStateCache.h"
 #include "OpenGLUtil.h"
@@ -127,7 +128,7 @@ void USlTexture::UpdateTexture()
 #endif
 
 	cudaArray_t TransitionArray = nullptr;
-	sl::MEM MemType = sl::MEM::MEM_GPU;
+	sl::MEM MemType = sl::MEM::GPU;
 
 	cudaGraphicsSubResourceGetMappedArray(&TransitionArray, CudaResource, 0, 0);
 	cudaError_t CudaError = cudaMemcpy2DToArray(TransitionArray, 0, 0, Mat.Mat.getPtr<sl::uchar1>(MemType), Mat.Mat.getStepBytes(MemType), Mat.Mat.getWidthBytes(), Mat.Mat.getHeight(), cudaMemcpyDeviceToDevice);
@@ -144,7 +145,7 @@ void USlTexture::UpdateTexture(const FSlMat& NewMat)
 #endif
 
 	cudaArray_t TransitionArray = nullptr;
-	sl::MEM MemType = sl::MEM::MEM_GPU;
+	sl::MEM MemType = sl::MEM::GPU;
 
 	cudaGraphicsSubResourceGetMappedArray(&TransitionArray, CudaResource, 0, 0);
 	cudaError_t CudaError = cudaMemcpy2DToArray(TransitionArray, 0, 0, NewMat.Mat.getPtr<sl::uchar1>(MemType), NewMat.Mat.getStepBytes(MemType), NewMat.Mat.getWidthBytes(), NewMat.Mat.getHeight(), cudaMemcpyDeviceToDevice);
@@ -161,7 +162,7 @@ void USlTexture::UpdateTexture(const sl::Mat& NewMat)
 #endif
 
 	cudaArray_t TransitionArray = nullptr;
-	sl::MEM MemType = sl::MEM::MEM_GPU;
+	sl::MEM MemType = sl::MEM::GPU;
 
 	cudaGraphicsSubResourceGetMappedArray(&TransitionArray, CudaResource, 0, 0);
 	cudaError_t CudaError = cudaMemcpy2DToArray(TransitionArray, 0, 0, NewMat.getPtr<sl::uchar1>(MemType), NewMat.getStepBytes(MemType), NewMat.getWidthBytes(), NewMat.getHeight(), cudaMemcpyDeviceToDevice);

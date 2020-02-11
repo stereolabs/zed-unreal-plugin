@@ -8,7 +8,7 @@
 #include "Stereolabs/Public/Core/StereolabsCoreGlobals.h"
 #include "Stereolabs/Public/Core/StereolabsCameraProxy.h"
 
-#include <sl/Core.hpp>
+#include <sl/Camera.hpp>
 
 #include "StereolabsMatFunctionLibrary.generated.h"
 

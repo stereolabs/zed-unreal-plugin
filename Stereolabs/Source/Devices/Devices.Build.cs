@@ -13,22 +13,10 @@ public class Devices : ModuleRules
 
     public Devices(ReadOnlyTargetRules Target) : base(Target)
     {
-        PublicIncludePaths.AddRange(
-            new string[] {
-                "Devices/Public"
+        PrivatePCHHeaderFile = "Devices/Public/Devices.h";
 
-                // ... add public include paths required here ...
-              }
-            );
-
-
-        PrivateIncludePaths.AddRange(
-            new string[] {
-                "Devices/Private"
-
-				// ... add other private include paths required here ...
-			}
-            );
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
         PublicDependencyModuleNames.AddRange(
             new string[]

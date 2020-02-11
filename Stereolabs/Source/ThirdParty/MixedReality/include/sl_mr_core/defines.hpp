@@ -1,7 +1,7 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
-#ifndef __DEFINES_H__
-#define __DEFINES_H__
+#ifndef __MR_CORE_DEFINES_H__
+#define __MR_CORE_DEFINES_H__
 
 #ifdef _WIN32 
 	#ifdef  SLMRCORE_EXPORT  
@@ -10,13 +10,11 @@
 		#define SLMRCORE_API __declspec(dllimport)   
 	#endif
 #else
-	#define SLMRUTILS_API
+    #define SLMRCORE_API
 #endif
 
 #include <cstdint>
-#include <sl/types.hpp>
-#include <sl/Core.hpp>
-#include <sl/defines.hpp>
+#include <sl/Camera.hpp>
 
 namespace sl {
 	namespace mr {
@@ -71,10 +69,10 @@ namespace sl {
 			sl::Transform offsetZedWorldTransform;
 
 			/** Tracking state */
-			sl::TRACKING_STATE trackingState;
+			sl::POSITIONAL_TRACKING_STATE trackingState;
 		};
 
-		typedef sl::timeStamp latencyTime;
+        typedef unsigned long long latencyTime;
 
 		/**
 		* \struct keyPose
@@ -84,7 +82,7 @@ namespace sl {
 			keyPose()
 			{}
 
-			keyPose(sl::Transform transform, sl::timeStamp timeStamp)
+            keyPose(sl::Transform transform, sl::Timestamp timeStamp)
 				:
 				transform(transform),
 				timeStamp(timeStamp)
@@ -94,7 +92,7 @@ namespace sl {
 			sl::Transform transform;
 
 			/** The pose time stamp */
-			sl::timeStamp timeStamp;
+            sl::Timestamp timeStamp;
 		};
 
 
@@ -106,7 +104,7 @@ namespace sl {
 			keyOrientation()
 			{}
 
-			keyOrientation(sl::Orientation orientation, sl::timeStamp timeStamp)
+            keyOrientation(sl::Orientation orientation, sl::Timestamp timeStamp)
 				:
 				orientation(orientation),
 				timeStamp(timeStamp)
@@ -116,7 +114,7 @@ namespace sl {
 			sl::Orientation orientation;
 
 			/** The pose time stamp */
-			sl::timeStamp timeStamp;
+            sl::Timestamp timeStamp;
 		};
 	}
 }

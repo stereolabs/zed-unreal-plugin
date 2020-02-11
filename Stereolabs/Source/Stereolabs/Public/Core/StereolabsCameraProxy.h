@@ -175,14 +175,14 @@ public:
 	 * @return The current camera settings
 	 */
 	UFUNCTION(BlueprintPure, meta = (Keywords = "get zed camera settings"), Category = "Zed|Camera")
-	FSlCameraSettings GetCameraSettings();
+	FSlVideoSettings GetCameraSettings();
 
 	/*
 	 * Set the camera settings
 	 * @param NewCameraSettings The camera settings to set
 	 */
 	UFUNCTION(BlueprintPure, meta = (Keywords = "set zed camera settings"), Category = "Zed|Camera")
-	void SetCameraSettings(const FSlCameraSettings& NewCameraSettings);
+	void SetCameraSettings(const FSlVideoSettings& NewCameraSettings);
 
 	/*
 	 * Get the current timestamp
@@ -212,7 +212,7 @@ public:
 	 * @param NewTrackingParameters The parameters to enable the tracking with
 	 */
 	UFUNCTION(BlueprintCallable, meta = (Keywords = "enable zed tracking"), Category = "Zed|Tracking")
-	void EnableTracking(const FSlTrackingParameters& NewTrackingParameters);
+	void EnableTracking(const FSlPositionalTrackingParameters& NewTrackingParameters);
 
 	/*
 	 * Disable the tracking of the Zed camera
@@ -269,7 +269,7 @@ public:
 	 * @return The spatial memory export state
 	 */
 	UFUNCTION(BlueprintPure, Category = "Zed|Tracking")
-	ESlSpatialMemoryExportState GetSpatialMemoryExportState();
+	ESlSpatialMemoryExportingState GetSpatialMemoryExportState();
 
 	/*
 	 * Enable Zed spatial mapping
@@ -509,13 +509,6 @@ public:
 	int GetSVONumberOfFrames();
 
 	/*
-	 * Record the current frame into the SVO
-	 * Call this function inside a grab callback function to be synchronized with asynchronous grab
-	 */
-	UFUNCTION(BlueprintCallable, meta = (Keywords = "set svo playback position"), Category = "Zed|SVO")
-	FSlRecordingState RecordCurrentFrame();
-
-	/*
 	 * Return the current recording state if recording is done automatically
 	 * @return The current recording state
 	 */
@@ -555,13 +548,6 @@ public:
 	float GetDepthMaxRangeValue();
 
 	/*
-	 * Sets the maximum distance of depth estimation
-	 * @param NewDepthMaxRange The maximum distance
-	 */
-	UFUNCTION(BlueprintCallable, meta = (Keywords = "set zed depth max range value"), Category = "Zed|Camera")
-	void SetDepthMaxRangeValue(float NewDepthMaxRange);
-
-	/*
 	 * @return the closest measurable distance by the camera, according to the camera and the depth map parameters.
 	 */
 	UFUNCTION(BlueprintPure, meta = (Keywords = "get zed depth min range value"), Category = "Zed|Camera")
@@ -572,15 +558,6 @@ public:
 	 */
 	UFUNCTION(BlueprintPure, meta = (Keywords = "get zed fps"), Category = "Zed|Camera")
 	float GetCameraFPS();
-
-	/*
-	 * Sets a new frame rate for the camera, or the closest available frame rate.
-	 * @param NewFPS The new desired frame rate.
-	 *
-	 * @note Works only if the camera is open in live mode.
-	 */
-	UFUNCTION(BlueprintCallable, meta = (Keywords = "set zed fps"), Category = "Zed|Camera")
-	void SetCameraFPS(int NewFPS);
 
 	/*
 	 * It is based on the difference of camera timestamps between two successful grab().
@@ -597,18 +574,6 @@ public:
 	UFUNCTION(BlueprintPure, meta = (Keywords = "get zed frame drop count"), Category = "Zed|Camera")
 	float GetFrameDroppedCount();
 
-	/*
-	 * Resets the self camera calibration. This function can be called at any time AFTER the open function has been called.
-	 * If no problem was encountered, the camera will use new parameters. Otherwise, it will be the old ones.
-	 */
-	UFUNCTION(BlueprintCallable, meta = (Keywords = "reset zed self calibration"), Category = "Zed|Camera")
-	void ResetSelfCalibration();
-
-	/*
-	 * @return the current status of the self-calibration
-	 */
-	UFUNCTION(BlueprintPure, meta = (Keywords = "get zed calibration state"), Category = "Zed|Camera")
-	ESlSelfCalibrationState GetSelfCalibratioState();
 
 	/*
 	 * @return The camera model
@@ -630,7 +595,7 @@ private:
 	 * Enable the tracking of the ZED camera
 	 * @param NewTrackingParameters The parameters to enable the tracking with
 	 */
-	void Internal_EnableTracking(const FSlTrackingParameters& NewTrackingParameters);
+	void Internal_EnableTracking(const FSlPositionalTrackingParameters& NewTrackingParameters);
 
 	// ------------------------------------------------------------------
 
@@ -644,6 +609,16 @@ public:
 	 * Perform a grab with the current runtime parameters
 	 */
 	void Grab();
+
+	/*
+	* Easy access to sl::Pose
+	*/
+	sl::POSITIONAL_TRACKING_STATE GetCameraPosition(sl::Pose& pose, sl::REFERENCE_FRAME rframe);
+
+	/*
+	* Easy access to IMU pose
+	*/
+	sl::ERROR_CODE GetCameraIMURotationAtImage(sl::Rotation& pose);
 
 	/*
 	 * Add a function to the grab delegate.
@@ -851,12 +826,22 @@ private:
 	int CurrentSVOPlaybackPosition;
 
 	/** Recording state */
-	sl::RecordingState SlRecordingState;
+	sl::RecordingStatus SlRecordingStatus;
 
 	/** Camera informations needed if camera disconnected */
 	sl::CameraInformation SlCameraInformation;
+ 
 
 private:
 	/** Underlying Zed camera */
 	sl::Camera Zed;
+
+	/** Underlying sensors data (imu, ...)
+	* One for current ts, one for image ts.
+	*/
+	sl::SensorsData CurrentSensorsData;
+	sl::SensorsData ImageRefSensorsData;
+	sl::ERROR_CODE IMUErrorCode;
+
+
 };

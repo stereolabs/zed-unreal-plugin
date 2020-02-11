@@ -13,26 +13,18 @@ public class Stereolabs : ModuleRules
 
     public Stereolabs(ReadOnlyTargetRules Target) : base(Target)
     {
-        // Note : if using CUFDA 9.0 , change "CUDA_PATH_V10_0" to "CUDA_PATH_V9_0"
-        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
+        PrivatePCHHeaderFile = "Stereolabs/Public/Stereolabs.h";
+
+        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V9_0", EnvironmentVariableTarget.Machine);
+        if (!Directory.Exists(CudaSDKPath))
+            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
+        if (!Directory.Exists(CudaSDKPath))
+            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_2", EnvironmentVariableTarget.Machine);
+
         string ZEDSDKPath  = System.Environment.GetEnvironmentVariable("ZED_SDK_ROOT_DIR", EnvironmentVariableTarget.Machine);
 
-        PublicIncludePaths.AddRange(
-            new string[] {
-                "Stereolabs/Public"
-
-				// ... add public include paths required here ...
-			}
-            );
-
-
-        PrivateIncludePaths.AddRange(
-            new string[] {
-                "Stereolabs/Private"
-
-				// ... add other private include paths required here ...
-			}
-            );
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
+        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
 
         PublicDependencyModuleNames.AddRange(
             new string[]
@@ -98,9 +90,9 @@ public class Stereolabs : ModuleRules
             }
 
             // Check SDK version
-            string DefinesHeaderFilePath = Path.Combine(DirPath, "include\\sl_zed\\defines.hpp");
-            string Major = "2";
-            string Minor = "7";
+            string DefinesHeaderFilePath = Path.Combine(DirPath, "include\\sl\\Camera.hpp");
+            string Major = "3";
+            string Minor = "0";
 
             // Find SDK major and minor version and compare
             foreach (var line in File.ReadLines(DefinesHeaderFilePath))

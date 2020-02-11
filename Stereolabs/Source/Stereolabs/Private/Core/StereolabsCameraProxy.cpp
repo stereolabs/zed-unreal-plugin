@@ -94,7 +94,7 @@ class FEnableTrackingAsyncTask : public FNonAbandonableTask
 	friend class FAsyncTask<FEnableTrackingAsyncTask>;
 
 public:
-	FEnableTrackingAsyncTask(const FSlTrackingParameters& TrackingParameters)
+	FEnableTrackingAsyncTask(const FSlPositionalTrackingParameters& TrackingParameters)
 		:
 		TrackingParameters(TrackingParameters)
 	{}
@@ -111,7 +111,7 @@ protected:
 	}
 
 protected:
-	FSlTrackingParameters TrackingParameters;
+	FSlPositionalTrackingParameters TrackingParameters;
 };
 
 USlCameraProxy::USlCameraProxy()
@@ -158,8 +158,7 @@ void USlCameraProxy::BeginDestroy()
 		MeasuresWorker = nullptr;
 	}
 
-	CloseCamera();
-
+	CloseCamera();  
 	Super::BeginDestroy();
 }
 
@@ -207,8 +206,8 @@ void USlCameraProxy::Internal_OpenCamera(const FSlInitParameters& InitParameters
 			FString ErrorString(sl::toString(ErrorCode).c_str());
 			SL_CAMERA_PROXY_LOG_E("Error during initialization: \"%s\"", *ErrorString);
 #endif
-			if (ErrorCode != sl::ERROR_CODE::ERROR_CODE_CAMERA_NOT_DETECTED &&
-				ErrorCode != sl::ERROR_CODE::ERROR_CODE_SENSOR_NOT_DETECTED)
+			if (ErrorCode != sl::ERROR_CODE::CAMERA_NOT_DETECTED &&
+				ErrorCode != sl::ERROR_CODE::SENSORS_NOT_AVAILABLE)
 			{
 				bAbandonOpenTask = true;
 			}
@@ -226,8 +225,6 @@ void USlCameraProxy::Internal_OpenCamera(const FSlInitParameters& InitParameters
 
 		return;
 	}
-
-	Zed.setDepthMaxRangeValue(InitParameters.DepthMaximumDistance);
 
 	SetOpenCameraErrorCode(ESlErrorCode::EC_None);
 
@@ -325,11 +322,11 @@ void USlCameraProxy::CloseCamera()
 		// Broadcast
 		OnCameraClosed.Broadcast();
 	}
-
+	 
 	Zed.close();
 }
 
-void USlCameraProxy::EnableTracking(const FSlTrackingParameters& NewTrackingParameters)
+void USlCameraProxy::EnableTracking(const FSlPositionalTrackingParameters& NewTrackingParameters)
 {
 	if (EnableTrackingAsyncTask)
 	{
@@ -350,16 +347,15 @@ void USlCameraProxy::EnableTracking(const FSlTrackingParameters& NewTrackingPara
 	EnableTrackingAsyncTask->StartBackgroundTask();
 }
 
-void USlCameraProxy::Internal_EnableTracking(const FSlTrackingParameters& NewTrackingParameters)
+void USlCameraProxy::Internal_EnableTracking(const FSlPositionalTrackingParameters& NewTrackingParameters)
 {
-	sl::ERROR_CODE ErrorCode;
-	sl::ERROR_CODE IMUDataErrorCode;
-	sl::IMUData IMUData;
+	sl::ERROR_CODE ErrorCode = sl::ERROR_CODE::FAILURE;
+	sl::ERROR_CODE IMUDataErrorCode = sl::ERROR_CODE::FAILURE;
 
 	SL_SCOPE_LOCK(Lock, GrabSection)
-		ErrorCode = Zed.enableTracking(sl::unreal::ToSlType(NewTrackingParameters));
+		ErrorCode = Zed.enablePositionalTracking(sl::unreal::ToSlType(NewTrackingParameters));
 
-		IMUDataErrorCode = Zed.getIMUData(IMUData, sl::TIME_REFERENCE_CURRENT);
+		IMUDataErrorCode = Zed.getSensorsData(CurrentSensorsData, sl::TIME_REFERENCE::CURRENT);
 	SL_SCOPE_UNLOCK
 
 #if WITH_EDITOR
@@ -376,10 +372,12 @@ void USlCameraProxy::Internal_EnableTracking(const FSlTrackingParameters& NewTra
 	}
 #endif
 	sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+	sl::Rotation imu_pose = CurrentSensorsData.imu.pose.getRotation();
+	imu_pose.setRotationVector(sl::float3(0,0,0));
 	sl::Rotation Pp = P;
 	Pp.transpose();
+	FRotator IMURotation = sl::unreal::ToUnrealType(P * imu_pose * Pp).Rotator();
 
-	FRotator IMURotation = sl::unreal::ToUnrealType(P * IMUData.pose_data.getRotation() * Pp).Rotator();
 	AsyncTask(ENamedThreads::GameThread, [this, ErrorCode, NewTrackingParameters, IMURotation] ()
 	{
 		if (!GSlCameraProxy)
@@ -393,7 +391,7 @@ void USlCameraProxy::Internal_EnableTracking(const FSlTrackingParameters& NewTra
 		EnableTrackingAsyncTask = nullptr;
 
 		bTrackingEnabled = (ErrorCode == sl::ERROR_CODE::SUCCESS);
-		bSpatialMemoryEnabled = NewTrackingParameters.bEnableSpatialMemory && bTrackingEnabled;
+		bSpatialMemoryEnabled = NewTrackingParameters.bEnableAreaMemory && bTrackingEnabled;
 
 		OnTrackingEnabled.Broadcast(bTrackingEnabled, sl::unreal::ToUnrealType(ErrorCode), NewTrackingParameters.Location, IMURotation);
 	});
@@ -410,7 +408,7 @@ void USlCameraProxy::DisableTracking()
 	SL_SCOPE_LOCK(Lock, GrabSection)
 		if (bTrackingEnabled)
 		{
-			Zed.disableTracking();
+			Zed.disablePositionalTracking();
 		
 			bTrackingEnabled = false;
 		}
@@ -425,12 +423,9 @@ void USlCameraProxy::ResetTracking(const FRotator& Rotation, const FVector& Loca
 {
 	sl::ERROR_CODE ErrorCode;
 	sl::ERROR_CODE IMUDataErrorCode;
-	sl::IMUData IMUData;
-
 	SL_SCOPE_LOCK(Lock, GrabSection)
-		ErrorCode = Zed.resetTracking(sl::unreal::ToSlType(FTransform(Rotation, Location)));	
-
-		IMUDataErrorCode = Zed.getIMUData(IMUData, sl::TIME_REFERENCE_CURRENT);
+	ErrorCode = Zed.resetPositionalTracking(sl::unreal::ToSlType(FTransform(Rotation, Location)));	
+	IMUDataErrorCode = Zed.getSensorsData(CurrentSensorsData, sl::TIME_REFERENCE::CURRENT);
 	SL_SCOPE_UNLOCK
 
 	bTrackingEnabled = (ErrorCode == sl::ERROR_CODE::SUCCESS);
@@ -452,29 +447,29 @@ void USlCameraProxy::ResetTracking(const FRotator& Rotation, const FVector& Loca
 		sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
 		sl::Rotation Pp = P;
 		Pp.transpose();
+		sl::Rotation rot_imu = CurrentSensorsData.imu.pose.getRotation();
 
-	OnTrackingReset.Broadcast(bTrackingEnabled, sl::unreal::ToUnrealType(ErrorCode), Location, sl::unreal::ToUnrealType(P * IMUData.pose_data.getRotation() * Pp).Rotator());
+	OnTrackingReset.Broadcast(bTrackingEnabled, sl::unreal::ToUnrealType(ErrorCode), Location, sl::unreal::ToUnrealType(P * rot_imu * Pp).Rotator());
 }
 
 ESlTrackingState USlCameraProxy::GetPosition(FSlPose& Pose, ESlReferenceFrame ReferenceFrame)
 {
 	SL_SCOPE_LOCK(Lock, GrabSection)
 		sl::Pose SlPose;
-		sl::TRACKING_STATE TrackingState = Zed.getPosition(SlPose, sl::unreal::ToSlType(ReferenceFrame));
+		sl::POSITIONAL_TRACKING_STATE TrackingState = Zed.getPosition(SlPose, sl::unreal::ToSlType(ReferenceFrame));
 
 #if WITH_EDITOR
-		if (TrackingState == sl::TRACKING_STATE::TRACKING_STATE_FPS_TOO_LOW)
+		if (TrackingState == sl::POSITIONAL_TRACKING_STATE::FPS_TOO_LOW)
 		{
 			SL_CAMERA_PROXY_LOG_W("FPS too low for good tracking.");
 		}
-		else if (TrackingState == sl::TRACKING_STATE::TRACKING_STATE_SEARCHING)
+		else if (TrackingState == sl::POSITIONAL_TRACKING_STATE::SEARCHING)
 		{
 			SL_CAMERA_PROXY_LOG_W("Tracking trying to relocate.");
 		}
 #endif
 
 		Pose = sl::unreal::ToUnrealType(SlPose);
-
 		return sl::unreal::ToUnrealType(TrackingState);
 	SL_SCOPE_UNLOCK
 }
@@ -482,24 +477,25 @@ ESlTrackingState USlCameraProxy::GetPosition(FSlPose& Pose, ESlReferenceFrame Re
 ESlErrorCode USlCameraProxy::GetIMUData(FSlIMUData& IMUData, ESlTimeReference TimeReference)
 {
 	SL_SCOPE_LOCK(Lock, GrabSection)
-		sl::IMUData SlIMUData;
-		sl::ERROR_CODE ErrorCode = Zed.getIMUData(SlIMUData, sl::unreal::ToSlType(TimeReference));
+			sl::ERROR_CODE ErrorCode = Zed.getSensorsData(CurrentSensorsData, sl::unreal::ToSlType(TimeReference));
 
 #if WITH_EDITOR
-		if (ErrorCode != sl::ERROR_CODE::SUCCESS)
-		{
-			FString ErrorString(sl::toString(ErrorCode).c_str());
-			SL_CAMERA_PROXY_LOG_E("Error while retrieving IMU data: \"%s\"", *ErrorString);
-		}
+			if (ErrorCode != sl::ERROR_CODE::SUCCESS)
+			{
+				FString ErrorString(sl::toString(ErrorCode).c_str());
+				SL_CAMERA_PROXY_LOG_E("Error while retrieving IMU data: \"%s\"", *ErrorString);
+			}
 #endif
 
-		sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
-		sl::Rotation Pp = P;
-		Pp.transpose();
-		IMUData = sl::unreal::ToUnrealType(SlIMUData);
-		IMUData.Transform.SetRotation(sl::unreal::ToUnrealType(P * SlIMUData.pose_data.getRotation() * Pp).ToQuat());
+			sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+			sl::Rotation Pp = P;
+			Pp.transpose();
+			IMUData = sl::unreal::ToUnrealType(CurrentSensorsData);
+			sl::Rotation rot_imu = CurrentSensorsData.imu.pose.getRotation();
+			IMUData.Transform.SetRotation(sl::unreal::ToUnrealType(P * rot_imu * Pp).ToQuat());
 
-		return sl::unreal::ToUnrealType(ErrorCode);
+			return sl::unreal::ToUnrealType(ErrorCode);
+
 	SL_SCOPE_UNLOCK
 }
 
@@ -515,7 +511,7 @@ bool USlCameraProxy::IsTrackingEnabled()
 
 bool USlCameraProxy::SaveSpatialMemoryArea(const FString& AreaSavingPath)
 {
-	sl::ERROR_CODE ErrorCode = Zed.saveCurrentArea(TCHAR_TO_UTF8(*AreaSavingPath));
+	sl::ERROR_CODE ErrorCode = Zed.saveAreaMap(TCHAR_TO_UTF8(*AreaSavingPath));
 
 #if WITH_EDITOR
 	if (ErrorCode != sl::ERROR_CODE::SUCCESS)
@@ -528,11 +524,11 @@ bool USlCameraProxy::SaveSpatialMemoryArea(const FString& AreaSavingPath)
 
 	return true;
 #else
-	return (Zed.saveCurrentArea(TCHAR_TO_UTF8(*AreaSavingPath)) == sl::ERROR_CODE::SUCCESS);
+	return (ErrorCode == sl::ERROR_CODE::SUCCESS);
 #endif
 }
 
-ESlSpatialMemoryExportState USlCameraProxy::GetSpatialMemoryExportState()
+ESlSpatialMemoryExportingState USlCameraProxy::GetSpatialMemoryExportState()
 {
 	return sl::unreal::ToUnrealType(Zed.getAreaExportState());
 }
@@ -563,8 +559,7 @@ bool USlCameraProxy::IsCameraOpened()
 
 bool USlCameraProxy::IsCameraConnected()
 {
-	return sl::Camera::isZEDconnected() > 0;
-	// return sl::Camera::getDeviceList().size() > 0; // TODO: check stability before using this.
+	return true;// sl::Camera::getDeviceList().size() > 0; // TODO: check stability before using this.
 }
 
 TArray<FSlDeviceProperties> USlCameraProxy::GetCameraList()
@@ -590,6 +585,33 @@ sl::Camera& USlCameraProxy::GetCamera()
 {
 	return Zed;
 }
+ 
+sl::POSITIONAL_TRACKING_STATE USlCameraProxy::GetCameraPosition(sl::Pose& pose, sl::REFERENCE_FRAME rframe)
+{
+	if (Zed.isOpened())
+		return Zed.getPosition(pose, rframe);
+	else
+		return sl::POSITIONAL_TRACKING_STATE::OFF;
+}
+ 
+sl::ERROR_CODE USlCameraProxy::GetCameraIMURotationAtImage(sl::Rotation& pose)
+{
+	if (Zed.isOpened()) {
+		 
+		if (IMUErrorCode == sl::ERROR_CODE::SUCCESS)
+		{
+			sl::Rotation P = Zed.getCameraInformation().camera_imu_transform.getRotation();
+			sl::Rotation Pp = P;
+			Pp.transpose();
+			pose = P * ImageRefSensorsData.imu.pose.getRotation() * Pp;
+		}
+
+		return IMUErrorCode;
+	}
+ 	else
+		return sl::ERROR_CODE::FAILURE;
+}
+
 
 void USlCameraProxy::Grab()
 {
@@ -618,6 +640,7 @@ void USlCameraProxy::Grab()
 
 	SL_SCOPE_LOCK(Lock, GrabSection)
 		ErrorCode = Zed.grab(RuntimeParameters);
+	    IMUErrorCode = Zed.getSensorsData(ImageRefSensorsData, sl::TIME_REFERENCE::IMAGE);
 	SL_SCOPE_UNLOCK
 
 	if (ErrorCode == sl::ERROR_CODE::SUCCESS)
@@ -625,9 +648,9 @@ void USlCameraProxy::Grab()
 		SL_SCOPE_LOCK(Lock, SVOSection)
 			if (bSVORecordingEnabled && bSVORecordingFrames)
 			{
-				SlRecordingState = Zed.record();
+				SlRecordingStatus = Zed.getRecordingStatus();
 #if WITH_EDITOR
-				if (!SlRecordingState.status)
+				if (!SlRecordingStatus.status)
 				{
 					SL_CAMERA_PROXY_LOG_E("Can't record current frame");
 				}
@@ -638,14 +661,12 @@ void USlCameraProxy::Grab()
 	else
 	{
 #if WITH_EDITOR
-		if (ErrorCode != sl::ERROR_CODE::ERROR_CODE_NOT_A_NEW_FRAME)
-		{
-			FString ErrorString(sl::toString(ErrorCode).c_str());
-			SL_CAMERA_PROXY_LOG_E("Grab error: \"%s\"", *ErrorString);
-		}
+		FString ErrorString(sl::toString(ErrorCode).c_str());
+		SL_CAMERA_PROXY_LOG_E("Grab error: \"%s\"", *ErrorString);
 #endif
 
-		if (ErrorCode == sl::ERROR_CODE::ERROR_CODE_CAMERA_NOT_DETECTED)
+		//Disconnected camera
+		if (ErrorCode == sl::ERROR_CODE::CAMERA_NOT_DETECTED)
 		{
 			if (bGrabEnabled)
 			{
@@ -662,23 +683,25 @@ void USlCameraProxy::Grab()
 	}
 
 	SL_SCOPE_LOCK(Lock, GrabDelegateSection)
-		OnGrabDoneDelegate.Broadcast(sl::unreal::ToUnrealType(ErrorCode), FSlTimestamp(Zed.getTimestamp(sl::TIME_REFERENCE::TIME_REFERENCE_IMAGE)));
+		OnGrabDoneDelegate.Broadcast(sl::unreal::ToUnrealType(ErrorCode), FSlTimestamp(Zed.getTimestamp(sl::TIME_REFERENCE::IMAGE)));
 	SL_SCOPE_UNLOCK
 }
 
-FSlCameraSettings USlCameraProxy::GetCameraSettings()
+FSlVideoSettings USlCameraProxy::GetCameraSettings()
 {
-	FSlCameraSettings CameraSettings;
+	FSlVideoSettings CameraSettings;
 
-	CameraSettings.Brightness			= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_BRIGHTNESS);
-	CameraSettings.Contrast				= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_CONTRAST);
-	CameraSettings.Hue					= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_HUE);
-	CameraSettings.Saturation			= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_SATURATION);
-	CameraSettings.WhiteBalance			= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_WHITEBALANCE);
-	CameraSettings.Gain					= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_GAIN);
-	CameraSettings.Exposure				= Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_EXPOSURE);
-	CameraSettings.bAutoWhiteBalance    = (Zed.getCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_AUTO_WHITEBALANCE) == 0 ? false : true);
-	CameraSettings.bAutoGainAndExposure = bAutoGainAndExposure; // Can't retrieve from function
+	CameraSettings.Brightness			= Zed.getCameraSettings(sl::VIDEO_SETTINGS::BRIGHTNESS);
+	CameraSettings.Contrast				= Zed.getCameraSettings(sl::VIDEO_SETTINGS::CONTRAST);
+	CameraSettings.Hue					= Zed.getCameraSettings(sl::VIDEO_SETTINGS::HUE);
+	CameraSettings.Saturation			= Zed.getCameraSettings(sl::VIDEO_SETTINGS::SATURATION);
+	CameraSettings.Sharpness			= Zed.getCameraSettings(sl::VIDEO_SETTINGS::SHARPNESS);
+	CameraSettings.WhiteBalance			= Zed.getCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_TEMPERATURE);
+	CameraSettings.Gain					= Zed.getCameraSettings(sl::VIDEO_SETTINGS::GAIN);
+	CameraSettings.Exposure				= Zed.getCameraSettings(sl::VIDEO_SETTINGS::EXPOSURE);
+	CameraSettings.bAutoWhiteBalance    = (Zed.getCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO) == 0 ? false : true);
+	CameraSettings.bAutoGainAndExposure = (Zed.getCameraSettings(sl::VIDEO_SETTINGS::AEC_AGC) == 0 ? false : true);
+	bAutoGainAndExposure = CameraSettings.bAutoGainAndExposure;
 	CameraSettings.bDefault			    = false;
 
 	return CameraSettings;
@@ -729,19 +752,18 @@ void USlCameraProxy::PauseSpatialMapping(bool bPause)
 
 void USlCameraProxy::RequestMeshAsync()
 {
-	Zed.requestMeshAsync();
+	Zed.requestSpatialMapAsync();
 }
 
 bool USlCameraProxy::GetMeshIsReadyAsync()
 {
-	return (Zed.getMeshRequestStatusAsync() == sl::ERROR_CODE::SUCCESS);
+	return (Zed.getSpatialMapRequestStatusAsync() == sl::ERROR_CODE::SUCCESS);
 }
 
 bool USlCameraProxy::RetrieveMeshAsync(USlMesh* Mesh)
 {
+	sl::ERROR_CODE ErrorCode = Zed.retrieveSpatialMapAsync(Mesh->Mesh);
 #if WITH_EDITOR
-	sl::ERROR_CODE ErrorCode = Zed.retrieveMeshAsync(Mesh->Mesh);
-
 	if (ErrorCode != sl::ERROR_CODE::SUCCESS)
 	{
 		FString ErrorString(sl::toString(ErrorCode).c_str());
@@ -751,15 +773,14 @@ bool USlCameraProxy::RetrieveMeshAsync(USlMesh* Mesh)
 
 	return true;
 #else
-	return (Zed.retrieveMeshAsync(Mesh->Mesh) == sl::ERROR_CODE::SUCCESS);
+	return (ErrorCode == sl::ERROR_CODE::SUCCESS);
 #endif
 }
 
 bool USlCameraProxy::ExtractWholeMesh(USlMesh* Mesh)
 {
+	sl::ERROR_CODE ErrorCode = Zed.extractWholeSpatialMap(Mesh->Mesh);
 #if WITH_EDITOR
-	sl::ERROR_CODE ErrorCode = Zed.extractWholeMesh(Mesh->Mesh);
-
 	if (ErrorCode != sl::ERROR_CODE::SUCCESS)
 	{
 		FString ErrorString(sl::toString(ErrorCode).c_str());
@@ -769,7 +790,7 @@ bool USlCameraProxy::ExtractWholeMesh(USlMesh* Mesh)
 
 	return true;
 #else
-	return  (Zed.extractWholeMesh(Mesh->Mesh) == sl::ERROR_CODE::SUCCESS);
+	return  (ErrorCode == sl::ERROR_CODE::SUCCESS);
 #endif
 }
 
@@ -795,10 +816,9 @@ bool USlCameraProxy::RetrieveMeasure(FSlMat& Mat, ESlMeasure MeasureType, ESlMem
 bool USlCameraProxy::RetrieveImage(sl::Mat& Mat, ESlView ViewType, ESlMemoryType MemoryType, const FIntPoint& Resolution)
 {
 	SCOPE_CYCLE_COUNTER(STAT_RetrieveImage);
+	sl::ERROR_CODE ErrorCode = Zed.retrieveImage(Mat, sl::unreal::ToSlType(ViewType), sl::unreal::ToSlType(MemoryType), sl::Resolution(Resolution.X, Resolution.Y));
 
 #if WITH_EDITOR
-	sl::ERROR_CODE ErrorCode = Zed.retrieveImage(Mat, sl::unreal::ToSlType(ViewType), sl::unreal::ToSlType(MemoryType), Resolution.X, Resolution.Y);
-
 	if (ErrorCode != sl::ERROR_CODE::SUCCESS)
 	{
 		FString ErrorString(sl::toString(ErrorCode).c_str());
@@ -810,16 +830,16 @@ bool USlCameraProxy::RetrieveImage(sl::Mat& Mat, ESlView ViewType, ESlMemoryType
 
 	return true;
 #else
-	return (Zed.retrieveImage(Mat, sl::unreal::ToSlType(ViewType), sl::unreal::ToSlType(MemoryType), Resolution.X, Resolution.Y) == sl::ERROR_CODE::SUCCESS);
+	return (ErrorCode == sl::ERROR_CODE::SUCCESS);
 #endif
 }
 
 bool USlCameraProxy::RetrieveMeasure(sl::Mat& Mat, ESlMeasure MeasureType, ESlMemoryType MemoryType, const FIntPoint& Resolution)
 {
 	SCOPE_CYCLE_COUNTER(STAT_RetrieveMeasure);
+	sl::ERROR_CODE ErrorCode = Zed.retrieveMeasure(Mat, sl::unreal::ToSlType(MeasureType), sl::unreal::ToSlType(MemoryType), sl::Resolution(Resolution.X, Resolution.Y));
 
 #if WITH_EDITOR
-	sl::ERROR_CODE ErrorCode = Zed.retrieveMeasure(Mat, sl::unreal::ToSlType(MeasureType), sl::unreal::ToSlType(MemoryType), Resolution.X, Resolution.Y);
 
 	if (ErrorCode != sl::ERROR_CODE::SUCCESS)
 	{
@@ -830,11 +850,11 @@ bool USlCameraProxy::RetrieveMeasure(sl::Mat& Mat, ESlMeasure MeasureType, ESlMe
 
 	return (ErrorCode == sl::ERROR_CODE::SUCCESS);
 #else
-	return (Zed.retrieveMeasure(Mat, sl::unreal::ToSlType(MeasureType), sl::unreal::ToSlType(MemoryType), Resolution.X, Resolution.Y) == sl::ERROR_CODE::SUCCESS);
+	return (ErrorCode == sl::ERROR_CODE::SUCCESS);
 #endif
 }
 
-void USlCameraProxy::SetCameraSettings(const FSlCameraSettings& NewCameraSettings)
+void USlCameraProxy::SetCameraSettings(const FSlVideoSettings& NewCameraSettings)
 {
 	bool bDefault = NewCameraSettings.bDefault;
 
@@ -844,19 +864,30 @@ void USlCameraProxy::SetCameraSettings(const FSlCameraSettings& NewCameraSetting
 		FMath::Clamp(NewCameraSettings.Contrast,	 0, 8);
 		FMath::Clamp(NewCameraSettings.Hue,			 0, 11);
 		FMath::Clamp(NewCameraSettings.Saturation,   0, 8);
+		FMath::Clamp(NewCameraSettings.Sharpness,    0, 8);
 		FMath::Clamp(NewCameraSettings.WhiteBalance, 2800, 6500);
 		FMath::Clamp(NewCameraSettings.Gain,		 0, 100);
 		FMath::Clamp(NewCameraSettings.Exposure,	 0, 100);
 	}
 
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_BRIGHTNESS,		   NewCameraSettings.Brightness,		bDefault);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_CONTRAST,		   NewCameraSettings.Contrast,			bDefault);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_HUE,				   NewCameraSettings.Hue,				bDefault);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_SATURATION,		   NewCameraSettings.Saturation,		bDefault);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_GAIN,			   NewCameraSettings.Gain,				NewCameraSettings.bAutoGainAndExposure);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_EXPOSURE,		   NewCameraSettings.Exposure,			NewCameraSettings.bAutoGainAndExposure);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_AUTO_WHITEBALANCE,  NewCameraSettings.bAutoWhiteBalance, NewCameraSettings.bAutoWhiteBalance || bDefault);
-	Zed.setCameraSettings(sl::CAMERA_SETTINGS::CAMERA_SETTINGS_WHITEBALANCE,	   NewCameraSettings.WhiteBalance,		NewCameraSettings.bAutoWhiteBalance || bDefault);
+	Zed.setCameraSettings(sl::VIDEO_SETTINGS::BRIGHTNESS, bDefault?NewCameraSettings.Brightness: sl::VIDEO_SETTINGS_VALUE_AUTO);
+	Zed.setCameraSettings(sl::VIDEO_SETTINGS::CONTRAST, bDefault ? NewCameraSettings.Contrast: sl::VIDEO_SETTINGS_VALUE_AUTO);
+	Zed.setCameraSettings(sl::VIDEO_SETTINGS::HUE, bDefault ? NewCameraSettings.Hue : sl::VIDEO_SETTINGS_VALUE_AUTO);
+	Zed.setCameraSettings(sl::VIDEO_SETTINGS::SATURATION, bDefault ? NewCameraSettings.Saturation : sl::VIDEO_SETTINGS_VALUE_AUTO);
+	Zed.setCameraSettings(sl::VIDEO_SETTINGS::SHARPNESS, bDefault ? NewCameraSettings.Sharpness : sl::VIDEO_SETTINGS_VALUE_AUTO);
+
+	if (NewCameraSettings.bAutoGainAndExposure) {
+		Zed.setCameraSettings(sl::VIDEO_SETTINGS::AEC_AGC, 1);
+	}
+	else {
+		Zed.setCameraSettings(sl::VIDEO_SETTINGS::GAIN, NewCameraSettings.Gain);
+		Zed.setCameraSettings(sl::VIDEO_SETTINGS::EXPOSURE, NewCameraSettings.Exposure);
+	}
+
+	if (NewCameraSettings.bAutoWhiteBalance)
+		Zed.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO,  1);
+	else
+		Zed.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_TEMPERATURE,	   NewCameraSettings.WhiteBalance);
 
 	bAutoGainAndExposure = NewCameraSettings.bAutoGainAndExposure;
 }
@@ -927,11 +958,11 @@ float USlCameraProxy::GetDepth(const FSlViewportHelper& ViewportHelper, const FI
 	{
 		if (FMath::IsNaN(Depth) || Depth > 0.0f)
 		{
-			Depth = Zed.getDepthMaxRangeValue();
+			Depth = Zed.getInitParameters().depth_maximum_distance;
 		}
 		else
 		{
-			Depth = Zed.getDepthMinRangeValue();
+			Depth = Zed.getInitParameters().depth_minimum_distance;
 		}
 	}
 
@@ -952,11 +983,11 @@ TArray<float> USlCameraProxy::GetDepths(const FSlViewportHelper& ViewportHelper,
 		{
 			if (FMath::IsNaN(Depth) || Depth > 0.0f)
 			{
-				Depth = Zed.getDepthMaxRangeValue();
+				Depth = Zed.getInitParameters().depth_maximum_distance;
 			}
 			else
 			{
-				Depth = Zed.getDepthMinRangeValue();
+				Depth = Zed.getInitParameters().depth_minimum_distance;
 			}
 		}
 
@@ -1012,11 +1043,11 @@ void USlCameraProxy::GetDepthAndNormal(const FSlViewportHelper& ViewportHelper, 
 	{
 		if (FMath::IsNaN(Depth) || Depth > 0.0f)
 		{
-			Depth = Zed.getDepthMaxRangeValue();
+			Depth = Zed.getInitParameters().depth_maximum_distance;
 		}
 		else
 		{
-			Depth = Zed.getDepthMinRangeValue();
+			Depth = Zed.getInitParameters().depth_minimum_distance;
 		}
 	}
 
@@ -1047,11 +1078,11 @@ void USlCameraProxy::GetDepthsAndNormals(const FSlViewportHelper& ViewportHelper
 		{
 			if (FMath::IsNaN(Depth) || Depth > 0.0f)
 			{
-				Depth = Zed.getDepthMaxRangeValue();
+				Depth = Zed.getInitParameters().depth_maximum_distance;  
 			}
 			else
 			{
-				Depth = Zed.getDepthMinRangeValue();
+				Depth = Zed.getInitParameters().depth_minimum_distance; 
 			}
 		}
 		Depths.Add(Depth + HMDToCameraOffset);
@@ -1144,7 +1175,10 @@ void USlCameraProxy::BP_RemoveFromGrabDelegate(FGrabDelegateHandle GrabDelegateH
 ESlErrorCode USlCameraProxy::EnableSVORecording(FString SVOFilePath, ESlSVOCompressionMode CompressionMode)
 {
 	SL_SCOPE_LOCK(Lock, GrabSection)
-		sl::ERROR_CODE ErrorCode = Zed.enableRecording(TCHAR_TO_UTF8(*SVOFilePath), sl::unreal::ToSlType(CompressionMode));
+		sl::RecordingParameters rec_params;
+		rec_params.video_filename = TCHAR_TO_UTF8(*SVOFilePath);
+		rec_params.compression_mode = sl::unreal::ToSlType(CompressionMode);
+		sl::ERROR_CODE ErrorCode = Zed.enableRecording(rec_params);
 
 		SL_SCOPE_LOCK(SubLock, SVOSection)
 			bSVORecordingEnabled = (ErrorCode == sl::ERROR_CODE::SUCCESS);
@@ -1204,24 +1238,7 @@ int USlCameraProxy::GetSVONumberOfFrames()
 {
 	return Zed.getSVONumberOfFrames();
 }
-
-FSlRecordingState USlCameraProxy::RecordCurrentFrame()
-{
-	SL_SCOPE_LOCK(Lock, GrabSection)
-		SL_SCOPE_LOCK(SubLock, SVOSection)
-			SlRecordingState = Zed.record();
-
-#if WITH_EDITOR
-	if (!SlRecordingState.status)
-	{
-		SL_CAMERA_PROXY_LOG_E("Can't record current frame");
-	}
-#endif
-
-			return sl::unreal::ToUnrealType(SlRecordingState);
-		SL_SCOPE_UNLOCK
-	SL_SCOPE_UNLOCK
-}
+ 
 
 void USlCameraProxy::PauseSVOplayback(bool bPause, int NewSVOPosition/* = -1*/)
 {
@@ -1252,7 +1269,7 @@ void USlCameraProxy::SetSVORecordFrames(bool bRecord)
 FSlRecordingState USlCameraProxy::GetSVORecordingState()
 {
 	SL_SCOPE_LOCK(Lock, SVOSection)
-		return sl::unreal::ToUnrealType(SlRecordingState);
+		return sl::unreal::ToUnrealType(SlRecordingStatus);
 	SL_SCOPE_UNLOCK
 }
 
@@ -1269,45 +1286,32 @@ void USlCameraProxy::PopCudaContext()
 
 int32 USlCameraProxy::GetConfidenceThreshold()
 {
-	return Zed.getConfidenceThreshold();
+	return Zed.getRuntimeParameters().confidence_threshold;
 }
 
 void USlCameraProxy::SetConfidenceThreshold(int32 NewConfidenceThreshold)
 {
 	SL_SCOPE_LOCK(Lock, GrabSection)
-		Zed.setConfidenceThreshold(NewConfidenceThreshold);
+		RuntimeParameters.confidence_threshold = NewConfidenceThreshold;
 	SL_SCOPE_UNLOCK
 }
 
 float USlCameraProxy::GetDepthMaxRangeValue()
 {
-	return Zed.getDepthMaxRangeValue();
-}
-
-void USlCameraProxy::SetDepthMaxRangeValue(float NewDepthMaxRange)
-{
-	SL_SCOPE_LOCK(Lock, GrabSection)
-		Zed.setDepthMaxRangeValue(NewDepthMaxRange);
-	SL_SCOPE_UNLOCK
+	return Zed.getInitParameters().depth_maximum_distance;
 }
 
 float USlCameraProxy::GetDepthMinRangeValue()
 {
-	return Zed.getDepthMinRangeValue();
+	return Zed.getInitParameters().depth_minimum_distance;
 }
 
 float USlCameraProxy::GetCameraFPS()
 {
-	return Zed.getCameraFPS();
+	return Zed.getCameraInformation().camera_fps;
 }
 
-void USlCameraProxy::SetCameraFPS(int NewFPS)
-{
-	SL_SCOPE_LOCK(Lock, GrabSection)
-		Zed.setCameraFPS(NewFPS);
-	SL_SCOPE_UNLOCK
-}
-
+ 
 float USlCameraProxy::GetCurrentFPS()
 {
 	return Zed.getCurrentFPS();
@@ -1318,14 +1322,4 @@ float USlCameraProxy::GetFrameDroppedCount()
 	return Zed.getFrameDroppedCount();
 }
 
-void USlCameraProxy::ResetSelfCalibration()
-{
-	SL_SCOPE_LOCK(Lock, GrabSection)
-		Zed.resetSelfCalibration();
-	SL_SCOPE_UNLOCK
-}
-
-ESlSelfCalibrationState USlCameraProxy::GetSelfCalibratioState()
-{
-	return sl::unreal::ToUnrealType(Zed.getSelfCalibrationState());
-}
+ 
