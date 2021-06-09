@@ -41,7 +41,7 @@ float USlFunctionLibrary::ConvertCustomDepthToDistance(const FSlCameraParameters
 
 FVector2D USlFunctionLibrary::GetRenderPlaneSize(const FIntPoint& ImageResolution, float VerticalFOV, float PlaneDistance)
 {
-	return  sl::unreal::ToUnrealType(sl::mr::computeRenderPlaneSize(sl::unreal::ToSlType2(ImageResolution), VerticalFOV, PlaneDistance));
+	return sl::unreal::ToUnrealType(sl::mr::computeRenderPlaneSize(sl::unreal::ToSlMrType2(ImageResolution), VerticalFOV, PlaneDistance));
 }
 
 FVector2D USlFunctionLibrary::GetRenderPlaneSizeWithGamma(UObject* WorldContextObject, const FIntPoint& ImageResolution, float PerceptionDistance, float ZedFocal, float PlaneDistance)
@@ -65,7 +65,7 @@ FVector2D USlFunctionLibrary::GetRenderPlaneSizeWithGamma(UObject* WorldContextO
 
 	if (GEngine->StereoRenderingDevice.IsValid() && GEngine->StereoRenderingDevice->IsStereoEnabled() && GEngine->XRSystem.IsValid() && GEngine->XRSystem->GetHMDDevice())
 	{
-		sl::Resolution HMDScreenResolution;
+		sl::mr::Resolution HMDScreenResolution;
 
 		FName Type = GEngine->XRSystem->GetSystemName();
 		if (Type == TEXT("SteamVR"))
@@ -96,12 +96,12 @@ FVector2D USlFunctionLibrary::GetRenderPlaneSizeWithGamma(UObject* WorldContextO
 	}
 #endif
 
-	return sl::unreal::ToUnrealType(sl::mr::computeRenderPlaneSizeWithGamma(sl::unreal::ToSlType2(ImageResolution), PerceptionDistance, EyeToZedDistance, PlaneDistance, HMDFocal, ZedFocal));
+	return sl::unreal::ToUnrealType(sl::mr::computeRenderPlaneSizeWithGamma(sl::unreal::ToSlMrType2(ImageResolution), PerceptionDistance, EyeToZedDistance, PlaneDistance, HMDFocal, ZedFocal));
 }
 
 FVector4 USlFunctionLibrary::GetOpticalCentersOffsets(const FIntPoint& ImageResolution, float Distance)
 {
-	return sl::unreal::ToUnrealType(sl::mr::computeOpticalCentersOffsets(GSlCameraProxy->SlCameraInformation.calibration_parameters, sl::unreal::ToSlType2(ImageResolution), Distance));
+	return sl::unreal::ToUnrealType(sl::mr::computeOpticalCentersOffsets(sl::unreal::ToSlMrType(GSlCameraProxy->SlCameraInformation.calibration_parameters.left_cam), sl::unreal::ToSlMrType(GSlCameraProxy->SlCameraInformation.calibration_parameters.right_cam), sl::unreal::ToSlMrType2(ImageResolution), Distance));
 }
 
 FVector2D USlFunctionLibrary::GetOffCenterProjectionOffset(ESlEye Eye)

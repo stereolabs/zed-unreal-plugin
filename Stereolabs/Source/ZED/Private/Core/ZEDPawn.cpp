@@ -77,6 +77,7 @@ void AZEDPawn::ZedCameraTrackingUpdated(const FZEDTrackingData& NewTrackingData)
 
 void AZEDPawn::InitRemap(FName HMDname, sl::RESOLUTION camRes, float dp)
 {
+	/*
 	FSlCameraInformation camInfo = GSlCameraProxy->GetCameraInformation(FIntPoint(0, 0));
 	FVector2D hmdFoc = USlFunctionLibrary::GetHmdFocale();
 	int RemapRez = 2501;
@@ -84,7 +85,8 @@ void AZEDPawn::InitRemap(FName HMDname, sl::RESOLUTION camRes, float dp)
 	sl::Mat* Mx;
 	sl::Mat* My;
 	// Warning: b, Ipd and dp have to be in mm
-	sl::mr::computeSRemap(sl::unreal::ToSlType(HMDname), camRes, camInfo.HalfBaseline*20, camInfo.HalfBaseline*20, (hmdFoc.X + hmdFoc.Y)/2.0, camInfo.CalibrationParameters.LeftCameraParameters.HFocal, dp*10 + 100.0, -120.0, 100.0, sl::Resolution(RemapRez, RemapRez), RemapPrecision, Mx, My);
+	//TODO
+	//sl::mr::computeSRemap(sl::unreal::ToSlType(HMDname), camRes, camInfo.HalfBaseline*20, camInfo.HalfBaseline*20, (hmdFoc.X + hmdFoc.Y)/2.0, camInfo.CalibrationParameters.LeftCameraParameters.HFocal, dp*10 + 100.0, -120.0, 100.0, sl::Resolution(RemapRez, RemapRez), RemapPrecision, Mx, My);
 	RemapMx = USlFunctionLibrary::GenerateTextureFromSlMat(Mx);
 	RemapMy = USlFunctionLibrary::GenerateTextureFromSlMat(My);
 
@@ -100,4 +102,5 @@ void AZEDPawn::InitRemap(FName HMDname, sl::RESOLUTION camRes, float dp)
 	RemapMaterialInstanceDynamic->SetScalarParameterValue(FName("OCxRight"), ProjectionMatrixRight.M[2][0] /2 + 0.5);
 	RemapMaterialInstanceDynamic->SetScalarParameterValue(FName("OCyRight"), -ProjectionMatrixRight.M[2][1] /2 + 0.5);
 	Camera->AddOrUpdateBlendable(RemapMaterialInstanceDynamic, 1.0f);
+	*/
 }

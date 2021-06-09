@@ -322,7 +322,7 @@ void AZEDCamera::Tick(float DeltaSeconds)
 		UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(HMDRotation, HMDLocation);
 
 		// HMD tracking transform
-		sl::Transform SlHMDTransform = sl::unreal::ToSlType(FTransform(HMDRotation, HMDLocation));
+		Eigen::Matrix4f SlHMDTransform = sl::unreal::ToEigenType(FTransform(HMDRotation, HMDLocation));
 
 		// Current timestamp
 		sl::Timestamp CurrentTimestamp = GSlCameraProxy->GetCamera().getTimestamp(sl::TIME_REFERENCE::CURRENT);
@@ -330,16 +330,16 @@ void AZEDCamera::Tick(float DeltaSeconds)
 		// Set IMU prior
 		if (GSlCameraProxy->bTrackingEnabled && GSlCameraProxy->GetCameraModel() == ESlModel::M_ZedM)
 		{
-			sl::Transform PastTransform;
+			Eigen::Matrix4f PastTransform;
 			bool bTransformRetrieved = sl::mr::latencyCorrectorGetTransform(CurrentTimestamp - sl::Timestamp(44000000), PastTransform, false);
 			if (bTransformRetrieved)
 			{
-				GSlCameraProxy->SetIMUPrior(sl::unreal::ToUnrealType(PastTransform));
+				GSlCameraProxy->SetIMUPrior(FTransform(sl::unreal::ToUnrealType(PastTransform)));
 			}
 		}
 
 		// latency transform
-		sl::Transform SlLatencyTransform;
+		Eigen::Matrix4f SlLatencyTransform = Eigen::Matrix4f::Identity();
 
 		// Latency corrector if new image
 		if(bNewImage || bUpdateTracking)
@@ -348,8 +348,10 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			sl::mr::latencyCorrectorAddKeyPose(sl::mr::keyPose(SlHMDTransform, CurrentTimestamp));
 
 			// Latency corrector
-			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
-			SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
+			bool latencyCorrector = sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
+			if (latencyCorrector) {
+				SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
+
 		}
 
 
@@ -368,8 +370,8 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			sl::mr::trackingData SlTrackingData = sl::unreal::ToSlType(TmpTrackingData);
 			sl::mr::driftCorrectorGetTrackingData(SlTrackingData, SlHMDTransform, SlLatencyTransform, bHMDHasTrackers && UHeadMountedDisplayFunctionLibrary::HasValidTrackingPosition(), true);
 
-			TrackingData.ZedWorldTransform = sl::unreal::ToUnrealType(SlTrackingData.zedWorldTransform);
-			TrackingData.OffsetZedWorldTransform = sl::unreal::ToUnrealType(SlTrackingData.offsetZedWorldTransform);
+			TrackingData.ZedWorldTransform = (FTransform)sl::unreal::ToUnrealType(SlTrackingData.zedWorldTransform);
+			TrackingData.OffsetZedWorldTransform = (FTransform)sl::unreal::ToUnrealType(SlTrackingData.offsetZedWorldTransform);
 		}
 	}
 	// Mono update
@@ -385,10 +387,10 @@ void AZEDCamera::Tick(float DeltaSeconds)
 		if (RenderingMode == ESlRenderingMode::RM_Stereo && TrackingParameters.TrackingType == ETrackingType::TrT_HMD)
 		{
 			// latency transform
-			sl::Transform SlLatencyTransform;
+			Eigen::Matrix4f SlLatencyTransform;
 			// Latency corrector
 			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
-			FTransform latencyTransform = sl::unreal::ToUnrealType(SlLatencyTransform);
+			FTransform latencyTransform = (FTransform)sl::unreal::ToUnrealType(SlLatencyTransform);
 
 			FZEDTrackingData TmpTrackingData;
 			TmpTrackingData.OffsetZedWorldTransform = latencyTransform;
@@ -406,10 +408,10 @@ void AZEDCamera::Tick(float DeltaSeconds)
 		else if (RenderingMode == ESlRenderingMode::RM_Stereo && TrackingParameters.TrackingType == ETrackingType::TrT_Mixte)
 		{
 			// latency transform
-			sl::Transform SlLatencyTransform;
+			Eigen::Matrix4f SlLatencyTransform;
 			// Latency corrector
 			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
-			FTransform latencyTransform = sl::unreal::ToUnrealType(SlLatencyTransform);
+			FTransform latencyTransform = (FTransform)sl::unreal::ToUnrealType(SlLatencyTransform);
 
 			FZEDTrackingData TmpTrackingData;
 			TmpTrackingData.OffsetZedWorldTransform.SetLocation(latencyTransform.GetLocation());
@@ -885,14 +887,14 @@ void AZEDCamera::InitHMDTrackingData()
 {
 	sl::mr::driftCorrectorInitialize();
 
-	sl::mr::driftCorrectorSetCalibrationTransform(sl::unreal::ToSlType(AntiDriftParameters.CalibrationTransform));
+	sl::mr::driftCorrectorSetCalibrationTransform(sl::unreal::ToEigenType(AntiDriftParameters.CalibrationTransform));
 	if (!bUseHMDTrackingAsOrigin)
 	{
-		sl::mr::driftCorrectorSetTrackingOffsetTransfrom(sl::unreal::ToSlType(FTransform(TrackingParameters.Rotation, TrackingParameters.Location)));
+		sl::mr::driftCorrectorSetTrackingOffsetTransfrom(sl::unreal::ToEigenType(FTransform(TrackingParameters.Rotation, TrackingParameters.Location)));
 	}
 	else
 	{
-		sl::mr::driftCorrectorSetTrackingOffsetTransfrom(sl::unreal::ToSlType(FTransform()));
+		sl::mr::driftCorrectorSetTrackingOffsetTransfrom(sl::unreal::ToEigenType(FTransform()));
 	}
 
 	bHMDHasTrackers = (UHeadMountedDisplayFunctionLibrary::GetNumOfTrackingSensors() > 0);
@@ -937,7 +939,7 @@ bool AZEDCamera::InitializeDriftCorrectorConstOffset(const FVector& HMDLocation,
 		//}
 		//else
 		//{
-			sl::mr::driftCorrectorSetConstOffsetTransfrom(sl::unreal::ToSlType(AntiDriftParameters.CalibrationTransform * FTransform(HMDRotation, HMDLocation)));
+			sl::mr::driftCorrectorSetConstOffsetTransfrom(sl::unreal::ToEigenType(AntiDriftParameters.CalibrationTransform * FTransform(HMDRotation, HMDLocation)));
 		//}
 
 		bPositionalTrackingInitialized = true;

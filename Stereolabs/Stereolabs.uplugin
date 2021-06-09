@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"Version": 1,
+	"Version": 5,
 	"VersionName": "1.0",
 	"FriendlyName": "Stereolabs",
 	"Description": "Stereolabs plugin supporting ZED stereo camera",

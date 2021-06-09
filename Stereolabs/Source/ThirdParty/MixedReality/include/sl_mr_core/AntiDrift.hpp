@@ -1,7 +1,7 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
-#ifndef __MR_CORE_ANTIDRIFT_H__
-#define __MR_CORE_ANTIDRIFT_H__
+#ifndef __ANTIDRIFT_H__
+#define __ANTIDRIFT_H__
 
 #include "sl_mr_core/defines.hpp"
 
@@ -25,25 +25,25 @@ namespace sl {
 		 * @param latencyCorrectorTransform The latency corrector transform
 		 * @param hasValidTrackingPosition  True if the position tracking is enabled
 		 */
-		SLMRCORE_API bool driftCorrectorGetTrackingData(sl::mr::trackingData& trackingData, const sl::Transform& HMDTransform, const sl::Transform& latencyCorrectorTransform, bool hasValidTrackingPosition, bool checkDrift);
+        SLMRCORE_API bool driftCorrectorGetTrackingData(sl::mr::trackingData& trackingData, const Eigen::Matrix4f& HMDTransform, const Eigen::Matrix4f& latencyCorrectorTransform, bool hasValidTrackingPosition, bool checkDrift);
 
 		/**
 		 * \brief Set calibration transform
 		 * @param calibrationTransform The transform created from calibration
 		 */
-		SLMRCORE_API void driftCorrectorSetCalibrationTransform(const sl::Transform& calibrationTransform);
+        SLMRCORE_API void driftCorrectorSetCalibrationTransform(const Eigen::Matrix4f& calibrationTransform);
 
 		/**
 		 * \brief Set const offset transform
 		 * @param constOffsetTransform The transform
 		 */
-		SLMRCORE_API void driftCorrectorSetConstOffsetTransfrom(const sl::Transform& constOffsetTransform);
+        SLMRCORE_API void driftCorrectorSetConstOffsetTransfrom(const Eigen::Matrix4f& constOffsetTransform);
 
 		/**
 		 * \brief Set the tracking offset transform
 		 * @param trackingOffsetTransform The transform
 		 */
-		SLMRCORE_API void driftCorrectorSetTrackingOffsetTransfrom(const sl::Transform& trackingOffsetTransform);
+        SLMRCORE_API void driftCorrectorSetTrackingOffsetTransfrom(const Eigen::Matrix4f& trackingOffsetTransform);
 	}
 }
 

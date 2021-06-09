@@ -32,9 +32,9 @@ namespace sl
 		{
 			sl::mr::trackingData TrackingData;
 
-			TrackingData.zedPathTransform = sl::unreal::ToSlType(UnrealType.ZedPathTransform);
-			TrackingData.zedWorldTransform = sl::unreal::ToSlType(UnrealType.ZedWorldTransform);
-			TrackingData.trackingState = sl::unreal::ToSlType(UnrealType.TrackingState);
+			TrackingData.zedPathTransform = sl::unreal::ToEigenType(UnrealType.ZedPathTransform);
+			TrackingData.zedWorldTransform = sl::unreal::ToEigenType(UnrealType.ZedWorldTransform);
+			TrackingData.trackingState = (int)sl::unreal::ToSlType(UnrealType.TrackingState);
 
 			return TrackingData;
 		}

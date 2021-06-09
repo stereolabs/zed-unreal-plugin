@@ -75,14 +75,15 @@ void AEnvironmentalLightingManager::Tick(float DeltaSeconds)
 		bool bUpdateLighting = Batch->Tick();
 		if (bUpdateLighting)
 		{
-			sl::mr::environmentalLightingComputeDiffuseCoefficients(&LeftEyeTexture->Mat.Mat);
+			sl::Mat mat = LeftEyeTexture->Mat.Mat;
+			sl::mr::environmentalLightingComputeDiffuseCoefficients(mat.getPtr<unsigned char>(), mat.getWidth(), mat.getHeight(), mat.getChannels());
 
-			sl::Matrix4f Red;
-			sl::Matrix4f Green;
-			sl::Matrix4f Blue;
-			sl::mr::environmentalLightingGetShmMatrix(&Red, 0);
-			sl::mr::environmentalLightingGetShmMatrix(&Green, 1);
-			sl::mr::environmentalLightingGetShmMatrix(&Blue, 2);
+			Eigen::Matrix4f Red;
+			Eigen::Matrix4f Green;
+			Eigen::Matrix4f Blue;
+			sl::mr::environmentalLightingGetShmMatrix(Red, 0);
+			sl::mr::environmentalLightingGetShmMatrix(Green, 1);
+			sl::mr::environmentalLightingGetShmMatrix(Blue, 2);
 
 			EnvironmentalLightingSettings.Red = sl::unreal::ToUnrealType(Red);
 			EnvironmentalLightingSettings.Green = sl::unreal::ToUnrealType(Green);

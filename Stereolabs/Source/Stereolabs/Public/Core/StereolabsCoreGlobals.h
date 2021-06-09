@@ -9,6 +9,7 @@
 #include "HeadMountedDisplay.h"
 
 #include <sl_mr_core/defines.hpp>
+#include <sl/Camera.hpp>
 
 /** Id of the grab thread */
 extern STEREOLABS_API uint32 GSlGrabThreadId;
@@ -1137,9 +1138,25 @@ namespace sl
 		}
 
 		/*
+		 * Convert from sl::mr::float2 to FVector2D
+		 */
+		FORCEINLINE FVector2D ToUnrealType(const sl::mr::float2& SlVector)
+		{
+			return FVector2D(SlVector.x, SlVector.y);
+		}
+
+		/*
 		 * Convert from sl::float3 to FVector
 		*/
-		 FORCEINLINE FVector ToUnrealType(const sl::float3& SlVector)
+		FORCEINLINE FVector ToUnrealType(const sl::float3& SlVector)
+		{
+			return FVector(SlVector.x, SlVector.y, SlVector.z);
+		}
+
+		/*
+		* Convert from sl::mr::float3 to FVector2D
+		*/
+		FORCEINLINE FVector ToUnrealType(const sl::mr::float3& SlVector)
 		{
 			return FVector(SlVector.x, SlVector.y, SlVector.z);
 		}
@@ -1148,6 +1165,14 @@ namespace sl
 		 * Convert from sl::float4 to FVector4
 		 */
 		FORCEINLINE FVector4 ToUnrealType(const sl::float4& SlVector)
+		{
+			return FVector4(SlVector.x, SlVector.y, SlVector.z, SlVector.w);
+		}
+
+		/*
+		 * Convert from sl::float4 to FVector4
+		*/
+		FORCEINLINE FVector4 ToUnrealType(const sl::mr::float4& SlVector)
 		{
 			return FVector4(SlVector.x, SlVector.y, SlVector.z, SlVector.w);
 		}
@@ -1190,6 +1215,57 @@ namespace sl
 			Matrix.M[3][1] = SlMatrix.ty;
 			Matrix.M[3][2] = SlMatrix.tz;
 			Matrix.M[3][3] = SlMatrix.m33;
+
+			return Matrix;
+		}
+
+		/*
+		* Convert from Eigen::Matrix4f to FMatrix(column to row)
+		*/
+		FORCEINLINE FMatrix ToUnrealType(const Eigen::Matrix4f& SlMatrix)
+		{
+			FMatrix Matrix;
+
+			// X plane
+			/*Matrix.M[0][0] = SlMatrix(0, 0);
+			Matrix.M[0][1] = SlMatrix(1, 0);
+			Matrix.M[0][2] = SlMatrix(2, 0);
+
+			// Y plane
+			Matrix.M[1][0] = SlMatrix(0, 1);
+			Matrix.M[1][1] = SlMatrix(1, 1);
+			Matrix.M[1][2] = SlMatrix(2, 1);
+
+			// Z plane
+			Matrix.M[2][0] = SlMatrix(0, 2);
+			Matrix.M[2][1] = SlMatrix(1, 2);
+			Matrix.M[2][2] = SlMatrix(2, 2);
+
+			// Origin
+			Matrix.M[3][0] = SlMatrix(0, 3);
+			Matrix.M[3][1] = SlMatrix(1, 3);
+			Matrix.M[3][2] = SlMatrix(2, 3);
+			Matrix.M[3][3] = SlMatrix(3, 3);*/
+
+			Matrix.M[0][0] = SlMatrix(0, 0);
+			Matrix.M[0][1] = SlMatrix(0, 1);
+			Matrix.M[0][2] = SlMatrix(0, 2);
+
+			// Y plane
+			Matrix.M[1][0] = SlMatrix(1, 0);
+			Matrix.M[1][1] = SlMatrix(1, 1);
+			Matrix.M[1][2] = SlMatrix(1, 2);
+
+			// Z plane
+			Matrix.M[2][0] = SlMatrix(2, 0);
+			Matrix.M[2][1] = SlMatrix(2, 1);
+			Matrix.M[2][2] = SlMatrix(2, 2);
+
+			// Origin
+			Matrix.M[3][0] = SlMatrix(3, 0);
+			Matrix.M[3][1] = SlMatrix(3, 1);
+			Matrix.M[3][2] = SlMatrix(3, 2);
+			Matrix.M[3][3] = SlMatrix(3, 3);
 
 			return Matrix;
 		}
@@ -1374,12 +1450,46 @@ namespace sl
 			Matrix.r12 = UnrealMatrix.M[2][1];
 			Matrix.r22 = UnrealMatrix.M[2][2];
 			Matrix.m32 = UnrealMatrix.M[2][3];
-			 
+
 			// Origin
-			Matrix.tx  = UnrealMatrix.M[3][0];
-			Matrix.ty  = UnrealMatrix.M[3][1];
-			Matrix.tz  = UnrealMatrix.M[3][2];
-		    Matrix.m33 = UnrealMatrix.M[3][3];
+			Matrix.tx = UnrealMatrix.M[3][0];
+			Matrix.ty = UnrealMatrix.M[3][1];
+			Matrix.tz = UnrealMatrix.M[3][2];
+			Matrix.m33 = UnrealMatrix.M[3][3];
+
+			return Matrix;
+		}
+
+		/*
+		 * Convert from FMatrix to Eigen::Matrix4f (column to row)
+		 */
+		FORCEINLINE Eigen::Matrix4f ToEigenType(const FMatrix& UnrealMatrix)
+		{
+			Eigen::Matrix4f Matrix;
+
+			// X plane
+			Matrix(0, 0) = UnrealMatrix.M[0][0];
+			Matrix(1, 0) = UnrealMatrix.M[0][1];
+			Matrix(2, 0) = UnrealMatrix.M[0][2];
+			Matrix(3, 0) = UnrealMatrix.M[0][3];
+
+			// Y plane
+			Matrix(0, 1) = UnrealMatrix.M[1][0];
+			Matrix(1, 1) = UnrealMatrix.M[1][1];
+			Matrix(2, 1) = UnrealMatrix.M[1][2];
+			Matrix(3, 1) = UnrealMatrix.M[1][3];
+
+			// Z plane
+			Matrix(0, 2) = UnrealMatrix.M[2][0];
+			Matrix(1, 2) = UnrealMatrix.M[2][1];
+			Matrix(2, 2) = UnrealMatrix.M[2][2];
+			Matrix(3, 2) = UnrealMatrix.M[2][3];
+
+			// Origin
+			Matrix(0, 3) = UnrealMatrix.M[3][0];
+			Matrix(1, 3) = UnrealMatrix.M[3][1];
+			Matrix(2, 3) = UnrealMatrix.M[3][2];
+			Matrix(3, 3) = UnrealMatrix.M[3][3];
 
 			return Matrix;
 		}
@@ -1392,12 +1502,28 @@ namespace sl
 			return static_cast<sl::Transform>(sl::unreal::ToSlType(UnrealTransform.ToMatrixWithScale()));
 		}
 
+		FORCEINLINE Eigen::Matrix4f ToEigenType(const FTransform& UnrealTransform)
+		{
+			return sl::unreal::ToEigenType(UnrealTransform.ToMatrixWithScale());
+		}
+
 		/*
 		 * Convert from FIntPoint to sl::Resolution
 		 */
 		FORCEINLINE sl::Resolution ToSlType2(const FIntPoint& UnrealType)
 		{
 			return sl::Resolution(UnrealType.X, UnrealType.Y);
+		}
+
+		/*
+		 * Convert from FIntPoint to sl::Resolution
+		 */
+		FORCEINLINE sl::mr::Resolution ToSlMrType2(const FIntPoint& UnrealType)
+		{
+			sl::mr::Resolution res;
+			res.width = UnrealType.X;
+			res.height = UnrealType.Y;
+			return res;
 		}
 
 		/*
@@ -1409,11 +1535,27 @@ namespace sl
 		}
 
 		/*
+		 * Convert from FIntPoint to sl::mr::uchar2
+		 */
+		FORCEINLINE sl::mr::uchar2 ToSlMrType(const FIntPoint& UnrealVector)
+		{
+			return sl::mr::uchar2(FMath::Clamp(UnrealVector.X, 0, 255), FMath::Clamp(UnrealVector.Y, 0, 255));
+		}
+
+		/*
 		 * Convert from FVector to sl::uchar3
 		 */
 		FORCEINLINE sl::uchar3 ToSlType(const FIntVector& UnrealVector)
 		{
 			return sl::uchar3(FMath::Clamp(UnrealVector.X, 0, 255), FMath::Clamp(UnrealVector.Y, 0, 255), FMath::Clamp(UnrealVector.Z, 0, 255));
+		}
+
+		/*
+		 * Convert from FVector to sl::mr::uchar3
+		 */
+		FORCEINLINE sl::mr::uchar3 ToSlMrType(const FIntVector& UnrealVector)
+		{
+			return sl::mr::uchar3(FMath::Clamp(UnrealVector.X, 0, 255), FMath::Clamp(UnrealVector.Y, 0, 255), FMath::Clamp(UnrealVector.Z, 0, 255));
 		}
 
 		/*
@@ -1425,11 +1567,27 @@ namespace sl
 		}
 
 		/*
+		 * Convert from FColor to sl::mr::uchar4
+		 */
+		FORCEINLINE sl::mr::uchar4 ToSlMrType(const FColor& UnrealColor)
+		{
+			return sl::mr::uchar4(UnrealColor.R, UnrealColor.G, UnrealColor.B, UnrealColor.A);
+		}
+
+		/*
 		 * Convert from FVector2D to sl::float2
 		 */
 		FORCEINLINE sl::float2 ToSlType(const FVector2D& UnrealVector)
 		{
 			return sl::float2(UnrealVector.X, UnrealVector.Y);
+		}
+
+		/*
+		 * Convert from FVector2D to sl::mr::float2
+		 */
+		FORCEINLINE sl::mr::float2 ToSlMrType(const FVector2D& UnrealVector)
+		{
+			return sl::mr::float2(UnrealVector.X, UnrealVector.Y);
 		}
 
 		/*
@@ -1441,11 +1599,27 @@ namespace sl
 		}
 
 		/*
+		 * Convert from FVector to sl::mr::float3
+		 */
+		FORCEINLINE sl::mr::float3 ToSlMrType(const FVector& UnrealVector)
+		{
+			return sl::mr::float3(UnrealVector.X, UnrealVector.Y, UnrealVector.Z);
+		}
+
+		/*
 		 * Convert from FVector4 to sl::float4
 		 */
 		FORCEINLINE sl::float4 ToSlType(const FVector4& UnrealVector)
 		{
 			return sl::float4(UnrealVector.X, UnrealVector.Y, UnrealVector.Z, UnrealVector.W);
+		}
+
+		/*
+		 * Convert from FVector to sl::mr::float4
+		 */
+		FORCEINLINE sl::mr::float4 ToSlMrType(const FVector4& UnrealVector)
+		{
+			return sl::mr::float4(UnrealVector.X, UnrealVector.Y, UnrealVector.Z, UnrealVector.W);
 		}
 
 		/*
@@ -1559,6 +1733,21 @@ namespace sl
 			CameraParameters.image_size = sl::unreal::ToSlType2(UnrealData.Resolution);
 
 			return CameraParameters;
+		}
+
+		/*
+		* Convert from sl::CameraParameters to Intrinsic
+		*/
+		FORCEINLINE sl::mr::Intrinsic ToSlMrType(const sl::CameraParameters& slData)
+		{
+			sl::mr::Intrinsic intrinsicParams;
+
+			intrinsicParams.fx = slData.fx;
+			intrinsicParams.fy = slData.fy;
+			intrinsicParams.cx = slData.cx;
+			intrinsicParams.cy = slData.cy;
+
+			return intrinsicParams;
 		}
 
 		/*

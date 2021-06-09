@@ -19,7 +19,10 @@ public class MixedReality : ModuleRules
     public MixedReality(ReadOnlyTargetRules Target) : base(Target)
     {
         Type = ModuleType.External;
- 
+
+        MinFilesUsingPrecompiledHeaderOverride = 1;
+        bFasterWithoutUnity = true;
+
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             string PostFix = "64";
@@ -46,6 +49,7 @@ public class MixedReality : ModuleRules
                     {
                         Directory.CreateDirectory(ProjectBinariesPathDirectory);
                     }
+
                     // Copy to the project binary folder
                     File.Copy(DLLPath, Path.Combine(ProjectBinariesPathDirectory, DLLName), true);
 
@@ -59,6 +63,17 @@ public class MixedReality : ModuleRules
                     {
                         File.Delete(Path.Combine(ProjectBinariesPathDirectory, DLLName));
                     }
+
+                    if (!Directory.Exists(ProjectBinariesPathDirectory))
+                    {
+                        Directory.CreateDirectory(ProjectBinariesPathDirectory);
+                    }
+
+                    // Copy to the project binary folder
+                    File.Copy(DLLPath, Path.Combine(ProjectBinariesPathDirectory, DLLName), true);
+
+                    // Add library to the packaged binary folder
+                    RuntimeDependencies.Add(ProjectBinariesPathDirectory + DLLName, StagedFileType.NonUFS);
                 }
             }
         }

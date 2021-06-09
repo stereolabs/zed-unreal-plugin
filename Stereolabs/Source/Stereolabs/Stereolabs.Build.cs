@@ -15,11 +15,13 @@ public class Stereolabs : ModuleRules
     {
         PrivatePCHHeaderFile = "Stereolabs/Public/Stereolabs.h";
 
-        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V9_0", EnvironmentVariableTarget.Machine);
-        if (!Directory.Exists(CudaSDKPath))
-            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
+        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
         if (!Directory.Exists(CudaSDKPath))
             CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_2", EnvironmentVariableTarget.Machine);
+		if (!Directory.Exists(CudaSDKPath))
+            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V11_0", EnvironmentVariableTarget.Machine);
+		if (!Directory.Exists(CudaSDKPath))
+            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V11_1", EnvironmentVariableTarget.Machine);
 
         string ZEDSDKPath  = System.Environment.GetEnvironmentVariable("ZED_SDK_ROOT_DIR", EnvironmentVariableTarget.Machine);
 
@@ -58,7 +60,7 @@ public class Stereolabs : ModuleRules
                 "SlateCore"
             }
             );
-
+       
         // Paths for low-level directx and opengl access
         string engine_path = Path.GetFullPath(Target.RelativeEnginePath);
         PrivateIncludePaths.AddRange(
@@ -92,7 +94,7 @@ public class Stereolabs : ModuleRules
             // Check SDK version
             string DefinesHeaderFilePath = Path.Combine(DirPath, "include\\sl\\Camera.hpp");
             string Major = "3";
-            string Minor = "1";
+            string Minor = "5";
 
             // Find SDK major and minor version and compare
             foreach (var line in File.ReadLines(DefinesHeaderFilePath))

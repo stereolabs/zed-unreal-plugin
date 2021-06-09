@@ -22,7 +22,7 @@ namespace sl {
 		 * \brief Compute the diffuse coefficients
 		 * @param buffer The mat buffer storing zed left image
 		 */
-		SLMRCORE_API void environmentalLightingComputeDiffuseCoefficients(sl::Mat* buffer);
+        SLMRCORE_API void environmentalLightingComputeDiffuseCoefficients(unsigned char* buffer, int w, int h, int nc);
 
 		/**
 		 * \brief Return the SHM matrix
@@ -30,7 +30,7 @@ namespace sl {
 		 * @param index  The column index
 		 * @return the SHM matrix
 		 */
-		SLMRCORE_API void environmentalLightingGetShmMatrix(sl::Matrix4f* matrix, int index);
+        SLMRCORE_API void environmentalLightingGetShmMatrix(Eigen::Matrix4f& matrix, int index);
 
 		/**
 		 * \brief Return the exposure

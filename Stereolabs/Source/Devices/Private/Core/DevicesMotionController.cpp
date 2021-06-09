@@ -157,7 +157,7 @@ bool ADevicesMotionController::GetTransform(FTransform& Transform)
 
 	FZEDTrackingData TrackingData = UZEDFunctionLibrary::GetTrackingData();
 	FTransform DelayedTransform = GetDelayedTransform();
-	sl::Transform SlLatencyTransform;
+	Eigen::Matrix4f SlLatencyTransform;
 	bool bTransform = sl::mr::latencyCorrectorGetTransform(GSlCameraProxy->GetCamera().getTimestamp(sl::TIME_REFERENCE::CURRENT) - sl::Timestamp(LatencyTime * 1000000), SlLatencyTransform, false);
 	if (!bTransform)
 	{
@@ -170,7 +170,7 @@ bool ADevicesMotionController::GetTransform(FTransform& Transform)
 	}
 	else
 	{
-		Transform = (DelayedTransform * sl::unreal::ToUnrealType(SlLatencyTransform).Inverse()) * TrackingData.OffsetZedWorldTransform;
+		Transform = (DelayedTransform * (FTransform)sl::unreal::ToUnrealType(SlLatencyTransform).Inverse()) * TrackingData.OffsetZedWorldTransform;
 	}	
 
 	return true;

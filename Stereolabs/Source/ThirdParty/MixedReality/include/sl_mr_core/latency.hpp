@@ -26,7 +26,7 @@ namespace sl {
 		/**
 		* \brief Shutdown latency corrector. No functions can be called after shutdown.
 		*/
-        SLMRCORE_API void latencyCorrectorAdjOffset(sl::Timestamp offset);
+        SLMRCORE_API void latencyCorrectorAdjOffset(unsigned long long offset);
 
 		/**
 		 * \brief Delete latency corrector
@@ -40,7 +40,7 @@ namespace sl {
 		 * @param outTransform     Retrieved transform
 		 * @return True if the transform is retrieved
 		 */
-        SLMRCORE_API bool latencyCorrectorGetTransform(sl::Timestamp timeStamp, sl::Transform& outTransform, bool useLatencyTime = true);
+        SLMRCORE_API bool latencyCorrectorGetTransform(unsigned long long timeStamp, Eigen::Matrix4f& outTransform, bool useLatencyTime = true);
 
 		SLMRCORE_API void ComputeOptimSO3(std::vector<sl::mr::keyOrientation> serie1, std::vector<sl::mr::keyOrientation> serie2, sl::mr::keyOrientation& output);
 
