@@ -15,15 +15,8 @@ public class Stereolabs : ModuleRules
     {
         PrivatePCHHeaderFile = "Stereolabs/Public/Stereolabs.h";
 
-        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_0", EnvironmentVariableTarget.Machine);
-        if (!Directory.Exists(CudaSDKPath))
-            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V10_2", EnvironmentVariableTarget.Machine);
-		if (!Directory.Exists(CudaSDKPath))
-            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V11_0", EnvironmentVariableTarget.Machine);
-		if (!Directory.Exists(CudaSDKPath))
-            CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH_V11_1", EnvironmentVariableTarget.Machine);
-
-        string ZEDSDKPath  = System.Environment.GetEnvironmentVariable("ZED_SDK_ROOT_DIR", EnvironmentVariableTarget.Machine);
+        string CudaSDKPath = System.Environment.GetEnvironmentVariable("CUDA_PATH", EnvironmentVariableTarget.Machine);
+        string ZEDSDKPath = System.Environment.GetEnvironmentVariable("ZED_SDK_ROOT_DIR", EnvironmentVariableTarget.Machine);
 
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
         PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Private"));
@@ -63,6 +56,7 @@ public class Stereolabs : ModuleRules
        
         // Paths for low-level directx and opengl access
         string engine_path = Path.GetFullPath(Target.RelativeEnginePath);
+
         PrivateIncludePaths.AddRange(
           new string[]
           {
@@ -162,11 +156,10 @@ public class Stereolabs : ModuleRules
                                       };
 
             PublicIncludePaths.Add(Path.Combine(DirPath, "include"));
-            PublicLibraryPaths.Add(Path.Combine(DirPath, "lib\\x64"));
 
             foreach (string Library in LibrariesName)
             {
-                PublicAdditionalLibraries.Add(Library + ".lib");
+                PublicAdditionalLibraries.Add(Path.Combine(DirPath, "lib\\x64", Library + ".lib"));
             }
         }
         else if (Target.Platform == UnrealTargetPlatform.Win32)

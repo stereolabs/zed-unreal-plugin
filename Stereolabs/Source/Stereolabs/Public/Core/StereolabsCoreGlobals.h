@@ -1216,6 +1216,7 @@ namespace sl
 			Matrix.M[3][2] = SlMatrix.tz;
 			Matrix.M[3][3] = SlMatrix.m33;
 
+
 			return Matrix;
 		}
 
@@ -1225,9 +1226,9 @@ namespace sl
 		FORCEINLINE FMatrix ToUnrealType(const Eigen::Matrix4f& SlMatrix)
 		{
 			FMatrix Matrix;
-
+			/*
 			// X plane
-			/*Matrix.M[0][0] = SlMatrix(0, 0);
+			Matrix.M[0][0] = SlMatrix(0, 0);
 			Matrix.M[0][1] = SlMatrix(1, 0);
 			Matrix.M[0][2] = SlMatrix(2, 0);
 
@@ -1245,8 +1246,10 @@ namespace sl
 			Matrix.M[3][0] = SlMatrix(0, 3);
 			Matrix.M[3][1] = SlMatrix(1, 3);
 			Matrix.M[3][2] = SlMatrix(2, 3);
-			Matrix.M[3][3] = SlMatrix(3, 3);*/
+			Matrix.M[3][3] = SlMatrix(3, 3);
+			*/
 
+			// X plane
 			Matrix.M[0][0] = SlMatrix(0, 0);
 			Matrix.M[0][1] = SlMatrix(0, 1);
 			Matrix.M[0][2] = SlMatrix(0, 2);
@@ -1264,7 +1267,7 @@ namespace sl
 			// Origin
 			Matrix.M[3][0] = SlMatrix(3, 0);
 			Matrix.M[3][1] = SlMatrix(3, 1);
-			Matrix.M[3][2] = SlMatrix(3, 2);
+			Matrix.M[3][2] = SlMatrix(2, 3);
 			Matrix.M[3][3] = SlMatrix(3, 3);
 
 			return Matrix;
@@ -1468,7 +1471,7 @@ namespace sl
 			Eigen::Matrix4f Matrix;
 
 			// X plane
-			Matrix(0, 0) = UnrealMatrix.M[0][0];
+			/*Matrix(0, 0) = UnrealMatrix.M[0][0];
 			Matrix(1, 0) = UnrealMatrix.M[0][1];
 			Matrix(2, 0) = UnrealMatrix.M[0][2];
 			Matrix(3, 0) = UnrealMatrix.M[0][3];
@@ -1489,6 +1492,30 @@ namespace sl
 			Matrix(0, 3) = UnrealMatrix.M[3][0];
 			Matrix(1, 3) = UnrealMatrix.M[3][1];
 			Matrix(2, 3) = UnrealMatrix.M[3][2];
+			Matrix(3, 3) = UnrealMatrix.M[3][3];*/
+
+			// X plane
+			Matrix(0, 0) = UnrealMatrix.M[0][0];
+			Matrix(0, 1) = UnrealMatrix.M[0][1];
+			Matrix(0, 2) = UnrealMatrix.M[0][2];
+			Matrix(0, 3) = UnrealMatrix.M[0][3];
+
+			// Y plane
+			Matrix(1, 0) = UnrealMatrix.M[1][0];
+			Matrix(1, 1) = UnrealMatrix.M[1][1];
+			Matrix(1, 2) = UnrealMatrix.M[1][2];
+			Matrix(1, 3) = UnrealMatrix.M[1][3];
+
+			// Z plane
+			Matrix(2, 0) = UnrealMatrix.M[2][0];
+			Matrix(2, 1) = UnrealMatrix.M[2][1];
+			Matrix(2, 2) = UnrealMatrix.M[2][2];
+			Matrix(2, 3) = UnrealMatrix.M[2][3];
+
+			// Origin
+			Matrix(3, 0) = UnrealMatrix.M[3][0];
+			Matrix(3, 1) = UnrealMatrix.M[3][1];
+			Matrix(3, 2) = UnrealMatrix.M[3][2];
 			Matrix(3, 3) = UnrealMatrix.M[3][3];
 
 			return Matrix;

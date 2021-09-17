@@ -180,6 +180,8 @@ void AZEDPlayerController::PostRenderFor(APlayerController* PC, UCanvas* Canvas,
 
 void AZEDPlayerController::Tick(float DeltaSeconds)
 {
+	//ZedPawn->SetActorScale3D(FVector(1, 1, 1));
+
 	if (bTickZedCamera)
 	{
 		ZedCamera->Tick(DeltaSeconds);
@@ -602,8 +604,8 @@ void AZEDPlayerController::ZedCameraOpened()
 		UGameplayStatics::GetAllActorsOfClass(this, AZEDInitializer::StaticClass(), ZedInitializer);
 
 		AZEDInitializer* Initializer = static_cast<AZEDInitializer*>(ZedInitializer[0]);
-		if(Initializer->RenderingParameters.SRemapEnable)
-			ZedPawn->InitRemap(GEngine->XRSystem->GetSystemName(), sl::unreal::ToSlType(ZedCamera->InitParameters.Resolution), ZedCamera->RenderingParameters.PerceptionDistance);
+		/*if(Initializer->RenderingParameters.SRemapEnable)
+			ZedPawn->InitRemap(GEngine->XRSystem->GetSystemName(), sl::unreal::ToSlType(ZedCamera->InitParameters.Resolution), ZedCamera->RenderingParameters.PerceptionDistance);*/
 	}
 
 	// Set fade post process
@@ -772,7 +774,7 @@ void AZEDPlayerController::UpdateNoise()
 	{
 		return;
 	}
-	
+
 	LastNoiseFactors = NoiseFactors;
 	
 	FLinearColor Red(NoiseFactors.R.X, NoiseFactors.R.Y, 0.0f);

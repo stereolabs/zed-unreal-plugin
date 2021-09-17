@@ -19,10 +19,7 @@ public class MixedReality : ModuleRules
     public MixedReality(ReadOnlyTargetRules Target) : base(Target)
     {
         Type = ModuleType.External;
-
-        MinFilesUsingPrecompiledHeaderOverride = 1;
-        bFasterWithoutUnity = true;
-
+        
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             string PostFix = "64";

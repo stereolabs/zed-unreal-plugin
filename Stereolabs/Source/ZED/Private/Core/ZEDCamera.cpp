@@ -348,9 +348,8 @@ void AZEDCamera::Tick(float DeltaSeconds)
 			sl::mr::latencyCorrectorAddKeyPose(sl::mr::keyPose(SlHMDTransform, CurrentTimestamp));
 
 			// Latency corrector
-			bool latencyCorrector = sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
-			if (latencyCorrector) {
-				SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
+			sl::mr::latencyCorrectorGetTransform(TrackingData.Timestamp.timestamp, SlLatencyTransform);
+			SetHMDPlanesRotationCpp(sl::unreal::ToUnrealType(SlLatencyTransform).Rotator());
 
 		}
 
