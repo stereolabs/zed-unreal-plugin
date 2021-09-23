@@ -1,14 +1,18 @@
 //======= Copyright (c) Stereolabs Corporation, All rights reserved. ===============
 
-#ifndef __MR_CORE_DEFINES_H__
-#define __MR_CORE_DEFINES_H__
+#ifndef __DEFINES_H__
+#define __DEFINES_H__
 
 #ifdef _WIN32 
+#ifdef SLMRCORE_NOEXPORT
+#define SLMRCORE_API
+#else
 	#ifdef  SLMRCORE_EXPORT  
 		#define SLMRCORE_API __declspec(dllexport)   
 	#else  
 		#define SLMRCORE_API __declspec(dllimport)   
 	#endif
+#endif
 #else
     #define SLMRCORE_API
 #endif
@@ -69,7 +73,7 @@ namespace sl {
 			sl::Transform offsetZedWorldTransform;
 
 			/** Tracking state */
-			sl::POSITIONAL_TRACKING_STATE trackingState;
+            sl::POSITIONAL_TRACKING_STATE trackingState;
 		};
 
         typedef unsigned long long latencyTime;
