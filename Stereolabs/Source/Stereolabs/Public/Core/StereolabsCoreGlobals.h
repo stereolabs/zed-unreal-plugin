@@ -402,6 +402,8 @@ namespace sl
 					return ESlModel::M_ZedM;
 				case sl::MODEL::ZED2:
 					return ESlModel::M_Zed2;
+				case sl::MODEL::ZED2i:
+					return ESlModel::M_Zed2i;
 				default:
 				{
 					ensureMsgf(false, TEXT("Unhandled sl::MODEL entry %u"), (uint32)SlType);
@@ -554,6 +556,8 @@ namespace sl
 					return sl::DEPTH_MODE::QUALITY;
 				case ESlDepthMode::DM_Ultra:
 					return sl::DEPTH_MODE::ULTRA;
+				case ESlDepthMode::DM_Neural:
+					return sl::DEPTH_MODE::NEURAL;
 				default:
 				{
 					ensureMsgf(false, TEXT("Unhandled ESlDepthMode entry %u"), (uint32)UnrealType);
@@ -604,6 +608,10 @@ namespace sl
 					return sl::MEASURE::XYZABGR_RIGHT;
 				case ESlMeasure::M_Confidence:
 					return sl::MEASURE::CONFIDENCE;
+				case ESlMeasure::M_DEPTH_U16_MM:
+					return sl::MEASURE::DEPTH_U16_MM;
+				case ESlMeasure::M_DEPTH_U16_MM_RIGHT:
+					return sl::MEASURE::DEPTH_U16_MM_RIGHT;
 				default:
 				{
 					ensureMsgf(false, TEXT("Unhandled ESlMeasure entry %u"), (uint32)UnrealType);
@@ -978,6 +986,8 @@ namespace sl
 					return sl::MODEL::ZED_M;
 				case  ESlModel::M_Zed2:
 					return sl::MODEL::ZED2;
+				case  ESlModel::M_Zed2i:
+					return sl::MODEL::ZED2i;
 				default:
 				{
 					ensureMsgf(false, TEXT("Unhandled ESlModel entry %u"), (uint32)UnrealType);
@@ -1676,7 +1686,7 @@ namespace sl
 
 			InitParameters.camera_disable_self_calib = UnrealData.bDisableSelfCalibration;
 			InitParameters.camera_fps = UnrealData.FPS;
-			InitParameters.camera_image_flip = UnrealData.bVerticalFlipImage;
+			InitParameters.camera_image_flip = (int)UnrealData.VerticalFlipImage;
 			InitParameters.camera_resolution = sl::unreal::ToSlType(UnrealData.Resolution);
 			InitParameters.coordinate_system = sl::unreal::ToSlType(UnrealData.CoordinateSystem);
 			InitParameters.coordinate_units = sl::unreal::ToSlType(UnrealData.Unit);

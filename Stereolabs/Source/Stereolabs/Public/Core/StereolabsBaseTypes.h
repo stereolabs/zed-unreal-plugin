@@ -145,7 +145,8 @@ enum class ESlDepthMode : uint8
 	DM_None				     UMETA(DisplayName = "None"),
 	DM_Performance			 UMETA(DisplayName = "Performance"),
 	DM_Quality				 UMETA(DisplayName = "Quality"),
-	DM_Ultra				 UMETA(DisplayName = "Ultra")
+	DM_Ultra				 UMETA(DisplayName = "Ultra"),
+	DM_Neural				 UMETA(DisplayName = "Neural")
 };
 
 /*
@@ -179,6 +180,17 @@ UENUM(BlueprintType, Category = "Stereolabs|Enum")
 enum class ESlCoordinateSystem : uint8
 {
 	CS_Cartesian   			 UMETA(DisplayName = "Cartesian left-handed")
+};
+
+/*
+ * Camera flip mode
+ */
+UENUM(BlueprintType, Category = "Stereolabs|Enum")
+enum class ESlFlipMode : uint8
+{
+	FP_OFF   			 UMETA(DisplayName = "Default behaviour"),
+	FP_ON   			 UMETA(DisplayName = "Images and camera sensors data are flipped"),
+	FP_AUTO   			 UMETA(DisplayName = "Detect automatically")
 };
 
 /*
@@ -251,7 +263,9 @@ enum class ESlMeasure : uint8
 	M_XYZ_ARGB				 UMETA(DisplayName = "Point Cloud ARGB"),
 	M_XYZ_ARGB_Right		 UMETA(DisplayName = "Point Cloud ARGB right"),
 	M_XYZ_ABGR				 UMETA(DisplayName = "Point Cloud ABGR"),
-	M_XYZ_ABGR_Right		 UMETA(DisplayName = "Point Cloud ABGR right")
+	M_XYZ_ABGR_Right		 UMETA(DisplayName = "Point Cloud ABGR right"),
+	M_DEPTH_U16_MM		     UMETA(DisplayName = "Depth in millimeter"),
+	M_DEPTH_U16_MM_RIGHT     UMETA(DisplayName = "Depth right in millimeter")
 };
 
 /*
@@ -331,7 +345,9 @@ enum class ESlSVOCompressionMode : uint8
 {
 	SCM_Lossless			UMETA(DisplayName = "Lossless"),
 	SCM_H264				UMETA(DisplayName = "H264"),
-	SCM_H265				UMETA(DisplayName = "H265")
+	SCM_H265				UMETA(DisplayName = "H265"),
+    SCM_H264_Lossless	    UMETA(DisplayName = "H264_Lossless"),
+	SCM_H265_Lossless	    UMETA(DisplayName = "H265_Lossless")
 };
 
 /* 
@@ -382,6 +398,7 @@ enum class ESlModel : uint8
 	M_Zed					UMETA(DisplayName = "ZED"),
 	M_ZedM					UMETA(DisplayName = "ZED Mini"),
 	M_Zed2					UMETA(DisplayName = "ZED 2"),
+	M_Zed2i          		UMETA(DisplayName = "ZED 2i"),
 	M_Unknown				UMETA(DisplayName = "Unknown")
 };
 
@@ -1131,7 +1148,8 @@ struct STEREOLABS_API FSlRuntimeParameters
 		SensingMode(ESlSensingMode::SM_Fill),
 		bEnableDepth(true),
 		ConfidenceThreshold(100),
-		ReferenceFrame(ESlReferenceFrame::RF_World)
+		ReferenceFrame(ESlReferenceFrame::RF_World),
+		bRemoveSaturatedAreas(true)
 	{
 	}
 
@@ -1167,6 +1185,13 @@ struct STEREOLABS_API FSlRuntimeParameters
 			ConfigReferenceFrame,
 			*Path
 			);
+
+		GConfig->GetBool(
+			Section,
+			TEXT("bRemoveSaturatedAreas"),
+			bRemoveSaturatedAreas,
+			*Path
+		);
 		ReferenceFrame = (ESlReferenceFrame)ConfigReferenceFrame;
 	}
 
@@ -1199,6 +1224,13 @@ struct STEREOLABS_API FSlRuntimeParameters
 			static_cast<int32>(ReferenceFrame),
 			*Path
 		);
+
+		GConfig->SetBool(
+			Section,
+			TEXT("bRemoveSaturatedAreas"),
+			bRemoveSaturatedAreas,
+			*Path
+		);
 	}
 
 	/** Sensing mode */
@@ -1216,6 +1248,10 @@ struct STEREOLABS_API FSlRuntimeParameters
 	/** Reference frame */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ESlReferenceFrame ReferenceFrame;
+
+	/** Remove saturated areas */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bRemoveSaturatedAreas;
 };
 
 /*
@@ -1559,7 +1595,7 @@ struct STEREOLABS_API FSlInitParameters
 		DepthMinimumDistance(10.0f),
 		DepthMaximumDistance(2000.0f),
 		bDisableSelfCalibration(false),
-		bVerticalFlipImage(false),
+		VerticalFlipImage(ESlFlipMode::FP_AUTO),
 		bEnableRightSideMeasure(false),
 		bEnableDepthStabilization(true)
 	{
@@ -1643,12 +1679,14 @@ struct STEREOLABS_API FSlInitParameters
 			*Path
 			);
 
-		GConfig->GetBool(
+		int32 FlipMode;
+		GConfig->GetInt(
 			Section,
-			TEXT("bVerticalFlipImage"),
-			bVerticalFlipImage,
+			TEXT("VerticalFlipImage"),
+			FlipMode,
 			*Path
-			);
+		);
+		VerticalFlipImage = (ESlFlipMode)FlipMode;
 
 		int32 ConfigResolution;
 		GConfig->GetInt(
@@ -1781,12 +1819,12 @@ struct STEREOLABS_API FSlInitParameters
 			*Path
 			);
 
-		GConfig->SetBool(
+		GConfig->SetInt(
 			Section,
-			TEXT("bVerticalFlipImage"),
-			bVerticalFlipImage,
+			TEXT("VerticalFlipImage"),
+			static_cast<int32>(VerticalFlipImage),
 			*Path
-			);
+		);
 
 		GConfig->SetString(
 			Section,
@@ -1875,7 +1913,7 @@ struct STEREOLABS_API FSlInitParameters
 
 	/** Vertical flip */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bVerticalFlipImage;
+	ESlFlipMode VerticalFlipImage;
 
 	/** Enable right side measure */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
