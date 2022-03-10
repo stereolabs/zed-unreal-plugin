@@ -183,6 +183,18 @@ enum class ESlCoordinateSystem : uint8
 };
 
 /*
+ * Input type
+ * See sl::INPUT_TYPE
+ */
+UENUM(BlueprintType, Category = "Stereolabs|Enum")
+enum class ESlInputType : uint8
+{
+	IT_USB   			 UMETA(DisplayName = "USB input mode"),
+	IT_SVO   			 UMETA(DisplayName = "SVO input mode"),
+	IT_STREAM   		 UMETA(DisplayName = "Stream input mode"),
+};
+
+/*
  * Camera flip mode
  */
 UENUM(BlueprintType, Category = "Stereolabs|Enum")
@@ -1583,7 +1595,9 @@ struct STEREOLABS_API FSlInitParameters
 		:
 		Resolution(ESlResolution::R_HD720),
 		FPS(60),
-		bUseSVO(false),
+		InputType(ESlInputType::IT_USB),
+		StreamIP(""),
+		StreamPort(30000),
 		SVOFilePath(""),
 		bRealTime(false),
 		DepthMode(ESlDepthMode::DM_Performance),
@@ -1637,6 +1651,15 @@ struct STEREOLABS_API FSlInitParameters
 			*Path
 			);
 
+		int32 inputType;
+		GConfig->GetInt(
+			Section,
+			TEXT("InputType"),
+			inputType,
+			*Path
+		);
+		InputType = (ESlInputType)inputType;
+
 		GConfig->GetFloat(
 			Section,
 			TEXT("DepthMinimumDistance"),
@@ -1648,13 +1671,6 @@ struct STEREOLABS_API FSlInitParameters
 			Section,
 			TEXT("DepthMaximumDistance"),
 			DepthMaximumDistance,
-			*Path
-			);
-
-		GConfig->GetBool(
-			Section,
-			TEXT("bUseSVO"),
-			bUseSVO,
 			*Path
 			);
 
@@ -1713,6 +1729,20 @@ struct STEREOLABS_API FSlInitParameters
 
 		GConfig->GetString(
 			Section,
+			TEXT("StreamIP"),
+			StreamIP,
+			*Path
+		);
+
+		GConfig->GetInt(
+			Section,
+			TEXT("StreamPort"),
+			StreamPort,
+			*Path
+		);
+
+		GConfig->GetString(
+			Section,
 			TEXT("VerboseFilePath"),
 			VerboseFilePath,
 			*Path
@@ -1749,12 +1779,12 @@ struct STEREOLABS_API FSlInitParameters
 			*Path
 			);
 
-		GConfig->SetBool(
+		GConfig->SetInt(
 			Section,
-			TEXT("bUseSVO"),
-			bUseSVO,
+			TEXT("InputType"),
+			static_cast<int32>(InputType),
 			*Path
-			);
+		);
 
 		GConfig->SetBool(
 			Section,
@@ -1828,6 +1858,20 @@ struct STEREOLABS_API FSlInitParameters
 
 		GConfig->SetString(
 			Section,
+			TEXT("StreamIP"),
+			*StreamIP,
+			*Path
+		);
+
+		GConfig->SetInt(
+			Section,
+			TEXT("StreamPort"),
+			StreamPort,
+			*Path
+		);
+
+		GConfig->SetString(
+			Section,
 			TEXT("SVOFilePath"),
 			*SVOFilePath,
 			*Path
@@ -1855,9 +1899,21 @@ struct STEREOLABS_API FSlInitParameters
 		);
 	}
 
-	/** Path to an SVO file if bUseSVO is true */
+	/** Input type used in the ZED SDK */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ESlInputType InputType;
+
+	/** Path to an SVO file if inputType is set to SVO */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString SVOFilePath;
+
+	/** IP of the sender camera if inputType is set to Stream */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString StreamIP;
+
+	/** Port of the sender camera if inputType is set to Stream */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int StreamPort;
 
 	/** Verbose file path */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -1894,10 +1950,6 @@ struct STEREOLABS_API FSlInitParameters
 	/** Coordinate system */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ESlCoordinateSystem CoordinateSystem;
-
-	/** True is reading a SVO, false for live */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bUseSVO;
 
 	/** If true, skip some SVO frame if computation time is too long */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

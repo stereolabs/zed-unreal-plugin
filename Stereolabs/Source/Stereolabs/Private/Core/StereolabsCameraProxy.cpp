@@ -235,7 +235,7 @@ void USlCameraProxy::Internal_OpenCamera(const FSlInitParameters& InitParameters
 			return;
 		}
 
-		if (InitParameters.bUseSVO)
+		if (InitParameters.InputType == ESlInputType::IT_SVO)
 		{
 			bSVOPlaybackEnabled = true;
 		}

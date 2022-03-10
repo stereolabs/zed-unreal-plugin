@@ -55,7 +55,7 @@ bool AZEDInitializer::CanEditChange(const UProperty* InProperty) const
 
 		if (StructName == FString("SlCameraSettings"))
 		{
-			return !InitParameters.bUseSVO;
+			return !(InitParameters.InputType == ESlInputType::IT_SVO);
 		}
 		
 		if (StructName == FString("SlRuntimeParameters"))
@@ -74,14 +74,20 @@ bool AZEDInitializer::CanEditChange(const UProperty* InProperty) const
 		PropertyName == GET_MEMBER_NAME_CHECKED(FSlSVOParameters, CompressionMode)
 		)
 	{
-		return !InitParameters.bUseSVO;
+		return !(InitParameters.InputType == ESlInputType::IT_SVO);
 	}
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlInitParameters, SVOFilePath) ||
 		PropertyName == GET_MEMBER_NAME_CHECKED(FSlInitParameters, bRealTime) ||
 		PropertyName == GET_MEMBER_NAME_CHECKED(FSlSVOParameters, bLoop))
 	{
-		return InitParameters.bUseSVO;
+		return (InitParameters.InputType == ESlInputType::IT_SVO);
+	}
+
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlInitParameters, StreamIP) ||
+		PropertyName == GET_MEMBER_NAME_CHECKED(FSlInitParameters, StreamPort))
+	{
+		return (InitParameters.InputType == ESlInputType::IT_STREAM);
 	}
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlInitParameters, DepthMode))
@@ -102,7 +108,7 @@ bool AZEDInitializer::CanEditChange(const UProperty* InProperty) const
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlRenderingParameters, ThreadingMode))
 	{
-		return !InitParameters.bUseSVO;
+		return (InitParameters.InputType == ESlInputType::IT_SVO);
 	}
 
 	return Super::CanEditChange(InProperty);

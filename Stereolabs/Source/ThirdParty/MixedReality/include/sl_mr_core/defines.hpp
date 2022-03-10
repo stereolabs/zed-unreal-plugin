@@ -744,19 +744,6 @@ namespace sl {
 			HMD_DEVICE_TYPE_HTC
 		};
 
-		/**
-		\enum RESOLUTION
-		\ingroup Video_group
-		\brief Represents the available resolution defined in the \ref cameraResolution list.
-		\note The VGA resolution does not respect the 640*480 standard to better fit the camera sensor (672*376 is used).
-		 */
-		enum class RESOLUTION {
-			HD2K, /**< 2208*1242, available framerates: 15 fps.*/
-			HD1080, /**< 1920*1080, available framerates: 15, 30 fps.*/
-			HD720, /**< 1280*720, available framerates: 15, 30, 60 fps.*/
-			VGA /**< 672*376, available framerates: 15, 30, 60, 100 fps.*/
-		};
-
 		struct SLMRCORE_API Intrinsic
 		{
 			float fx;

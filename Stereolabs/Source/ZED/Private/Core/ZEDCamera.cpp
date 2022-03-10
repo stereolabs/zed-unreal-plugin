@@ -264,12 +264,13 @@ bool AZEDCamera::CanEditChange(const UProperty* InProperty) const
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlSVOParameters, bLoop))
 	{
-		return InitParameters.bUseSVO;
+		return InitParameters.InputType == ESlInputType::IT_SVO;
 	}
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlRenderingParameters, ThreadingMode))
 	{
-		return !InitParameters.bUseSVO;
+		//return !InitParameters.bUseSVO;
+		return InitParameters.InputType != ESlInputType::IT_SVO;
 	}
 
 	if (PropertyName == GET_MEMBER_NAME_CHECKED(FSlPositionalTrackingParameters, bEnablePoseSmoothing))
@@ -724,7 +725,8 @@ void AZEDCamera::InitializeParameters(AZEDInitializer* ZedInitializer, bool bHMD
 	
 	checkf(RuntimeParameters.ReferenceFrame == ESlReferenceFrame::RF_World, TEXT("Reference frame must be World when using the ZEDCamera"));
 
-	if (InitParameters.bUseSVO)
+	//if (InitParameters.bUseSVO)
+	if (InitParameters.InputType == ESlInputType::IT_SVO)
 	{
 		RenderingParameters.ThreadingMode = ESlThreadingMode::TM_SingleThreaded;
 	}
